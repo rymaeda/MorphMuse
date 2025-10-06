@@ -1,4 +1,5 @@
-## 🧩 MorphMuse — Surface Modeling Plugin for CamBam
+## 🧩 MorphMuse — Surface Modeling Plugin for CamBam (generous Copilot generated text)
+![Surface Example](Captura de tela 2025-10-06 012754.png)
 
 **MorphMuse** is a custom plugin for [CamBam](http://www.cambam.info/), designed to generate smooth, triangulated surfaces from 2D polylines. It enables advanced mesh creation workflows by combining open and closed curves, sampling them intelligently, and building structured surfaces suitable for CNC, 3D modeling, or artistic design.
 
@@ -16,7 +17,7 @@
 
 ### 🛠️ Technologies
 
-- Built with **C#** targeting **.NET Framework 4.6 / 4.8**
+- Built with **C#** targeting **.NET Framework 4.8**
 - Integrates directly with **CamBam's CAD and geometry APIs**
 - Uses custom classes for surface building, curve sampling, and mesh generation
 
@@ -36,4 +37,6 @@
 ### 🧠 Credits
 
 Developed by **Ricardo Y Maeda**  
-Special thanks to the CamBam community and plugin ecosystem.
+Special thanks to the CamBam community.
+
+[MorphMuse on CamBam Forum website](https://cambamcnc.com/forum/index.php?topic=10728.0)
