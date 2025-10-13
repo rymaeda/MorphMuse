@@ -110,12 +110,6 @@
     <Compile Include="Services\CurveSampler.cs" />
     <Compile Include="Services\ProjectLogger.cs" />
     <Compile Include="Services\SurfaceBuilderCopilot.cs" />
-    <Compile Include="UI\Form1.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UI\Form1.Designer.cs">
-      <DependentUpon>Form1.cs</DependentUpon>
-    </Compile>
     <Compile Include="Services\GenerateParallelClosedPolylines.cs" />
     <Compile Include="Services\Geometry3F.cs" />
     <Compile Include="Services\OpenPolylineProcessor.cs" />
@@ -124,9 +118,6 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\PolylineManager.cs" />
-    <EmbeddedResource Include="UI\Form1.resx">
-      <DependentUpon>Form1.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -152,6 +143,7 @@
     <Folder Include="Core\" />
     <Folder Include="legacy\" />
     <Folder Include="model\" />
+    <Folder Include="UI\" />
     <Folder Include="Utils\" />
   </ItemGroup>
   <ItemGroup>

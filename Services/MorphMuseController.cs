@@ -14,12 +14,13 @@ using System.Linq; // Add this using directive at the top with other usings
 public class MorphMuseController
 {
     private readonly CamBamUI _ui; // Reference to the main CamBam UI.
-    private Form1 _formInstance;   // Instance of the fallback form.
+    private readonly SettingsManager _settingsManager; // Mova a instância para o nível da classe
 
     // Constructor receives the CamBam UI.
     public MorphMuseController(CamBamUI ui)
     {
         _ui = ui;
+        _settingsManager = new SettingsManager(); // Instancie no construtor
     }
 
     // Main execution method for the plugin.
@@ -28,7 +29,12 @@ public class MorphMuseController
         // Validate if the selection contains one open and one closed polyline.
         if (!PolylineManager.ValidateSelection(out PolylineManager selectionManager))
         {
-            ShowFallbackForm(); // Show fallback form if selection is invalid.
+            MessageBox.Show(
+                "Invalid Selection. Please select one open and one closed polyline.",
+                "Invalid Selection.",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );// Show fallback form if selection is invalid.
             return;
         }
 
@@ -74,20 +80,17 @@ public class MorphMuseController
     // Prepares and simplifies the selected closed curves.
     private List<List<Point3F>> PrepareClosedCurves(PolylineManager selectionManager)
     {
-        var settingsManager = new SettingsManager(); // Settings manager instance.
-        var units = SettingsManager.GetUnits();       // Get current drawing units.
+        // Use a instância da classe em vez de criar uma nova
+        var units = SettingsManager.GetUnits();
 
-        // Use the closed polyline as a guide curve if available.
         Polyline guideCurve = selectionManager.ClosedPoly != null ? selectionManager.ClosedPoly : null;
         var adaptiveParams = guideCurve != null
-            ? settingsManager.GetAdaptiveParametersFromGuideCurve(guideCurve)
-            : settingsManager.GetDefaultAdaptiveParameters(); // Use centralized method for default values.
+            ? _settingsManager.GetAdaptiveParametersFromGuideCurve(guideCurve)
+            : _settingsManager.GetDefaultAdaptiveParameters(); // Use centralized method for default values.
 
-        // Convert tolerance and sampling step to current units.
         double dpTolerance = SettingsManager.ConvertFromMillimeters(adaptiveParams.DouglasPeuckerTolerance, units);
         double samplingStep = SettingsManager.ConvertFromMillimeters(adaptiveParams.SamplingStep, units);
 
-        // Process the open curve for simplification.
         var openCurveProcessor = new OpenPolylineProcessor(
             selectionManager.OpenPoly,
             samplingStep,
@@ -174,20 +177,5 @@ public class MorphMuseController
         cadFile.CreateLayer(layerName);
         cadFile.SetActiveLayer(layerName);
         return layerName;
-    }
-
-    // Shows the fallback form if the selection is invalid.
-    private void ShowFallbackForm()
-    {
-        if (_formInstance == null || _formInstance.IsDisposed)
-        {
-            _formInstance = new Form1();
-            _formInstance.StartPosition = FormStartPosition.CenterParent;
-            _formInstance.Show(Form.ActiveForm);
-        }
-        else
-        {
-            _formInstance.BringToFront();
-        }
     }
 }

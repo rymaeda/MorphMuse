@@ -79,10 +79,7 @@ namespace MorphMuse.Services
         public static bool ValidateSelection(out PolylineManager selectionManager)
         {
             if (!PolylineManager.TryCreateFromSelection(out selectionManager))
-            {
-                MessageBox.Show("Select at least one open polyline and one closed polyline.");
                 return false;
-            }
             return true;
         }
 
