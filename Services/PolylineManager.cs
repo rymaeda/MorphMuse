@@ -1,99 +1,86 @@
 ﻿using CamBam.CAD;
-using CamBam.Geom;
 using CamBam.UI;
 using CamBam.Util;
+using CamBam.Geom;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
 namespace MorphMuse.Services
 {
-    public class PolylineManager
+    internal class PolylineManager
     {
         public Polyline ClosedPoly { get; private set; }
-        public List<Polyline> OpenPoly { get; private set; } = new List<Polyline>(); // ✅ list of polylines
-        public List<Polyline> OpenPoly2 { get; private set; } = new List<Polyline>(); // ✅ list of polylines
+        public Polyline OpenPoly { get; private set; }
         public int CounterOpenP { get; private set; }
         public int CounterClosedP { get; private set; }
 
-        private PolylineManager() { } // private default constructor
-
-        public static PolylineManager CreateFromOpenPair(Polyline open1, Polyline open2)
+        private PolylineManager(Polyline closed, Polyline open)
         {
-            return new PolylineManager
-            {
-                OpenPoly = new List<Polyline> { open1 },
-                OpenPoly2 = new List<Polyline> { open2 },
-                CounterOpenP = 2,
-                CounterClosedP = 0
-            };
+            ClosedPoly = closed;
+            OpenPoly = open;
         }
 
-        public static PolylineManager CreateFromOpenAndClosed(Polyline open, Polyline closed)
-        {
-            return new PolylineManager
-            {
-                OpenPoly = new List<Polyline> { open },
-                ClosedPoly = closed,
-                CounterOpenP = 1,
-                CounterClosedP = 1
-            };
-        }
-        public static bool TryCreateFromSelection(out PolylineManager manager, out Enum mode)
+        public static bool TryCreateFromSelection(out PolylineManager manager)
         {
             manager = null;
             ICADView view = CamBamUI.MainUI.ActiveView;
-            mode= null;
 
             if (view.SelectedEntities.Length == 0)
             {
-                MessageBox.Show("No selection.");
+                MessageBox.Show(TextTranslation.Translate("No selection."));
                 return false;
             }
 
-            List<Polyline> openPolys = new List<Polyline>();
-            List<Polyline> closedPolys = new List<Polyline>();
+            Polyline closed = null;
+            Polyline open = null;
+            int closedCount = 0;
+            int openCount = 0;
 
             foreach (Entity ent in view.SelectedEntities)
             {
                 if (ent is Polyline poly)
                 {
                     if (poly.Closed)
-                        closedPolys.Add(poly);
+                    {
+                        closed = poly;
+                        closedCount++;
+                    }
                     else
-                        openPolys.Add(poly);
+                    {
+                        open = poly;
+                        openCount++;
+                    }
                 }
             }
 
-            // Valid case 1: two open polylines
-            if (openPolys.Count == 2 && closedPolys.Count == 0)
+            if (closedCount == 1 && openCount == 1)
             {
-                manager = CreateFromOpenPair(openPolys[0], openPolys[1]);
-                CamBam.ThisApplication.AddLogMessage("[Copilot] Two open polylines selected.");
-                mode = SurfaceMode.GeneratrizOpen; // Set mode to indicate two open polylines
+                manager = new PolylineManager(closed, open)
+                {
+                    CounterClosedP = closedCount,
+                    CounterOpenP = openCount
+                };
+                float MaxOpenPolyAmplitude= GetOpenPolyEffectiveAmplitudeX(open);
+                CamBam.ThisApplication.AddLogMessage($"Open Polyline: X-Offset={MaxOpenPolyAmplitude:F4}");
+                float MaxNegativeOffset = FindMaxSafeNegativeOffsetBinarySearch(closed);
+                CamBam.ThisApplication.AddLogMessage($"Closed Polyline: MaxOffset={MaxNegativeOffset:F4}");
+                if (MaxOpenPolyAmplitude < MaxNegativeOffset)
+                {
+                    MessageBox.Show(TextTranslation.Translate("Warning: The open polyline's effective amplitude along the X axis\nexceeds the maximum negative offset of the closed polyline ({.\nThis plugin can't deal this yet."));
+                    return false;
+                }
                 return true;
             }
 
-            // Valid case 2: one open and one closed polyline
-            if (openPolys.Count == 1 && closedPolys.Count == 1)
-            {
-                manager = CreateFromOpenAndClosed(openPolys[0], closedPolys[0]);
-                CamBam.ThisApplication.AddLogMessage("[Copilot] One open and one closed polyline selected.");
-                mode = SurfaceMode.GeneratrizClosed;
-                return true;
-            }
-
-            MessageBox.Show("Please select either:\n- Two open polylines\n- One open and one closed polyline.");
-            mode = null;
+            //MessageBox.Show(TextTranslation.Translate("Please, select one and just one closed Polyline and\none and just one open Polyline."));
             return false;
         }
         public static bool ValidateSelection(out PolylineManager selectionManager)
         {
-            if (!PolylineManager.TryCreateFromSelection(out selectionManager, out Enum mode))
+            if (!PolylineManager.TryCreateFromSelection(out selectionManager))
             {
-                MessageBox.Show("Select at least one open polyline and one closed polyline\n" +
-                                "OR two open polylines.");
+                MessageBox.Show("Select at least one open polyline and one closed polyline.");
                 return false;
             }
             return true;

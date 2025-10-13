@@ -69,21 +69,26 @@ namespace MorphMuse.Services
                 Faces = faces.ToArray()
             };
         }
+
         public static void GenerateCapSurface(List<Point3F> topCurve, Point3F center, Point3FArray points, Dictionary<Point3F, int> indexMap, List<TriangleFace> faces)
         {
+            // Add the center point to the points list and get its index.
             int centerIndex = AddPoint(center, points, indexMap);
 
+            // For each consecutive segment of the curve, create a triangle between the center and the two segment points.
             for (int i = 0; i < topCurve.Count - 1; i++)
             {
-                int ia = AddPoint(topCurve[i], points, indexMap);
-                int ib = AddPoint(topCurve[i + 1], points, indexMap);
-                faces.Add(new TriangleFace(centerIndex, ia, ib));
+                int ia = AddPoint(topCurve[i], points, indexMap);         // Index of the current point
+                int ib = AddPoint(topCurve[i + 1], points, indexMap);     // Index of the next point
+                faces.Add(new TriangleFace(centerIndex, ia, ib));         // Triangle: center → current point → next point
             }
 
-            int iaLast = AddPoint(topCurve[topCurve.Count - 1], points, indexMap);
-            int ibFirst = AddPoint(topCurve[0], points, indexMap);
-            faces.Add(new TriangleFace(centerIndex, iaLast, ibFirst));
+            // Close the cap by connecting the last point to the first, forming the final triangle.
+            int iaLast = AddPoint(topCurve[topCurve.Count - 1], points, indexMap); // Last point of the curve
+            int ibFirst = AddPoint(topCurve[0], points, indexMap);                 // First point of the curve
+            faces.Add(new TriangleFace(centerIndex, iaLast, ibFirst));             // Final triangle to close the cap
         }
+
         public static void GenerateLateralSurface(List<List<Point3F>> simplifiedCurves, Point3FArray points, Dictionary<Point3F, int> indexMap, List<TriangleFace> faces)
         {
             for (int i = 0; i < simplifiedCurves.Count - 1; i++)
@@ -109,7 +114,7 @@ namespace MorphMuse.Services
                 }
             }
         }
-      
+
         private static void AddTriangle(Point3F a, Point3F b, Point3F c,
                                 Point3FArray points,
                                 Dictionary<Point3F, int> pointIndex,
@@ -125,7 +130,7 @@ namespace MorphMuse.Services
             faces.Add(new TriangleFace(ia, ic, ib));
         }
 
-        public static int AddPoint(Point3F p, Point3FArray points, Dictionary<Point3F, int> indexMap)
+        private static int AddPoint(Point3F p, Point3FArray points, Dictionary<Point3F, int> indexMap)
         {
             if (!indexMap.TryGetValue(p, out int index))
             {
@@ -144,7 +149,7 @@ namespace MorphMuse.Services
             return Geometry3F.Length(cross) * 0.5 < 1e-6;
         }
 
-       public static void AlignCurveToPrevious(List<Point3F> previous, List<Point3F> current)
+        public static void AlignCurveToPrevious(List<Point3F> previous, List<Point3F> current)
         {
             int n = current.Count;
             int m = previous.Count;

@@ -1,4 +1,5 @@
-﻿using CamBam.CAD;
+﻿using CamBam;
+using CamBam.CAD;
 using CamBam.Geom;
 using CamBam.UI;
 using MorphMuse.Services;
@@ -63,9 +64,12 @@ namespace PluginSettings
         public AdaptiveParameters GetAdaptiveParametersFromGuideCurve(Polyline GuideCurve)
         {
             double diagonal = BoundingBoxDiagonal(GuideCurve); // drawing units
+            var config = new CamBamConfig();
+            double CambamStepResolution = config.STEPResolution;
+            CamBam.ThisApplication.AddLogMessage($"STEPResolution: {CambamStepResolution}.");
 
-            double dpTolerance = Clamp(diagonal * 0.0005, 0.005, 0.05);     // 0.1% of size, min 0.0001, max 1.0
-            double samplingStep = Clamp(diagonal * 0.001, 0.001, 0.01);   // 0.5% of size, min 0.0005, max 10.0
+            double dpTolerance = Clamp(diagonal * 0.0005, 0.005, CambamStepResolution); // Douglas-Peucker tolerance
+            double samplingStep = Clamp(diagonal * 0.001, 0.001, CambamStepResolution/5); // Step size of arc discretization
 
             return new AdaptiveParameters
             {
