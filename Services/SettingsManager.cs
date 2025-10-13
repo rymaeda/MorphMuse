@@ -68,8 +68,8 @@ namespace PluginSettings
             double CambamStepResolution = config.STEPResolution;
             CamBam.ThisApplication.AddLogMessage($"STEPResolution: {CambamStepResolution}.");
 
-            double dpTolerance = Clamp(diagonal * 0.0005, 0.005, CambamStepResolution); // Douglas-Peucker tolerance
-            double samplingStep = Clamp(diagonal * 0.001, 0.001, CambamStepResolution/5); // Step size of arc discretization
+            double dpTolerance = Clamp(diagonal * 0.001, 0.001, CambamStepResolution/5); // Douglas-Peucker tolerance
+            double samplingStep = Clamp(diagonal * 0.005, 0.005, CambamStepResolution); // Step size of arc discretization
 
             return new AdaptiveParameters
             {

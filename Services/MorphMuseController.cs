@@ -166,7 +166,7 @@ public class MorphMuseController
 
         do
         {
-            layerName = $"{baseName}{index:D2}";
+            layerName = $"{baseName}{index:D3}";
             index++;
         }
         while (cadFile.HasLayer(layerName));
