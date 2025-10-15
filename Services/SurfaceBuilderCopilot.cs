@@ -191,28 +191,6 @@ namespace MorphMuse.Services
             }
         }
 
-        private static double[] TriangleAngles(Point3F a, Point3F b, Point3F c)
-        {
-            var ab = Geometry3F.FromPoints(a, b);
-            var bc = Geometry3F.FromPoints(b, c);
-            var ca = Geometry3F.FromPoints(c, a);
-
-            double lab = Geometry3F.Length(ab);
-            double lbc = Geometry3F.Length(bc);
-            double lca = Geometry3F.Length(ca);
-
-            // Lei dos cossenos
-            double angleA = Math.Acos(Clamp((lab * lab + lca * lca - lbc * lbc) / (2 * lab * lca)));
-            double angleB = Math.Acos(Clamp((lab * lab + lbc * lbc - lca * lca) / (2 * lab * lbc)));
-            double angleC = Math.PI - angleA - angleB;
-
-            return new[] { angleA, angleB, angleC };
-        }
-
-        private static double Clamp(double x)
-        {
-            return Math.Max(-1.0, Math.Min(1.0, x));
-        }
 
         static int FindClosestIndex(Point3F target, List<Point3F> curve)
         {

@@ -7,36 +7,49 @@ using System.Linq;
 
 public static class CurveSampler
 {
-
-
     public static PointList CreatePointlistFromPolylineStepCopilot(Polyline curve, double StepMax)
     {
         var points = new PointList();
 
-        // Aplica transformação, se houver
+        // Clona e aplica transformação, se houver
         var polyline = (Polyline)curve.Clone();
         if (polyline.ApplyTransformation())
         {
             polyline.Transform = Matrix4x4F.Identity;
         }
 
-        double totalLength = polyline.GetPerimeter();
-        double currentLength = 0.0;
+        // Extrai os segmentos e arcos da polilinha
+        Entity[] primitives = polyline.ToPrimitives();
 
-        // Sempre adiciona o primeiro ponto
-        points.Add(polyline.FirstPoint);
-
-        // Amostragem contínua ao longo da curva
-        while (currentLength + StepMax < totalLength)
+        foreach (var primitive in primitives)
         {
-            currentLength += StepMax;
-            double t = currentLength / totalLength;
-            Point3F pt = polyline.GetParametricPoint(t);
-            points.Add(pt);
-        }
+            if (primitive is Arc arc)
+            {
+                // Calcula número de pontos com base no raio e StepMax
+                double arcLength = Math.Abs(arc.Sweep) * Math.PI / 180.0 * arc.Radius;
+                int steps = Math.Max(2, (int)Math.Ceiling(arcLength / StepMax));
 
-        // Sempre adiciona o último ponto
-        points.Add(polyline.LastPoint);
+                double angleStep = arc.Sweep / steps;
+                for (int i = 0; i <= steps; i++)
+                {
+                    double angleDeg = arc.Start + i * angleStep;
+                    double angleRad = angleDeg * Math.PI / 180.0;
+
+                    double x = arc.Point.X + arc.Radius * Math.Cos(angleRad);
+                    double y = arc.Point.Y + arc.Radius * Math.Sin(angleRad);
+                    points.Add(new Point3F(x, y, arc.Point.Z));
+                }
+            }
+            else if (primitive is Line line)
+            {
+                // Adiciona apenas os pontos extremos da linha
+                if (line.Points.Count > 0)
+                {
+                    points.Add(line.Points[0]);
+                    points.Add(line.Points[line.Points.Count - 1]);
+                }
+            }
+        }
 
         // Aplica transformação final, se necessário
         if (!polyline.Transform.IsIdentity())
@@ -45,7 +58,6 @@ public static class CurveSampler
         }
 
         // Remove duplicata se curva for fechada
-        // Replace C# 8.0 index operator '^1' with explicit indexing for compatibility with C# 7.3
         if (points.Points.Count > 1 && Point3F.Match(points.Points[0], points.Points[points.Points.Count - 1]))
         {
             points.Points.RemoveAt(points.Points.Count - 1);
@@ -53,6 +65,7 @@ public static class CurveSampler
 
         return points;
     }
+
     public static List<List<Point3F>> GenerateSampledPointsFromContours(
         List<List<Polyline>> orderedContours,
         List<Point3F> simplifiedGeratriz,

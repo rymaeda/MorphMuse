@@ -139,12 +139,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Config\" />
-    <Folder Include="Core\" />
     <Folder Include="legacy\" />
-    <Folder Include="model\" />
-    <Folder Include="UI\" />
-    <Folder Include="Utils\" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
