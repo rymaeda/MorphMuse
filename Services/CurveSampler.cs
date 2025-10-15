@@ -11,21 +11,21 @@ public static class CurveSampler
     {
         var points = new PointList();
 
-        // Clona e aplica transformação, se houver
+        // Clone and apply transformation, if any
         var polyline = (Polyline)curve.Clone();
         if (polyline.ApplyTransformation())
         {
             polyline.Transform = Matrix4x4F.Identity;
         }
 
-        // Extrai os segmentos e arcos da polilinha
+        // Extract segments and arcs from the polyline
         Entity[] primitives = polyline.ToPrimitives();
 
         foreach (var primitive in primitives)
         {
             if (primitive is Arc arc)
             {
-                // Calcula número de pontos com base no raio e StepMax
+                // Calculate number of points based on radius and StepMax
                 double arcLength = Math.Abs(arc.Sweep) * Math.PI / 180.0 * arc.Radius;
                 int steps = Math.Max(2, (int)Math.Ceiling(arcLength / StepMax));
 
@@ -42,7 +42,7 @@ public static class CurveSampler
             }
             else if (primitive is Line line)
             {
-                // Adiciona apenas os pontos extremos da linha
+                // Add only the endpoints of the line
                 if (line.Points.Count > 0)
                 {
                     points.Add(line.Points[0]);
@@ -51,13 +51,13 @@ public static class CurveSampler
             }
         }
 
-        // Aplica transformação final, se necessário
+        // Apply final transformation, if necessary
         if (!polyline.Transform.IsIdentity())
         {
             points.ApplyTransformation(polyline.Transform);
         }
 
-        // Remove duplicata se curva for fechada
+        // Remove duplicate if curve is closed
         if (points.Points.Count > 1 && Point3F.Match(points.Points[0], points.Points[points.Points.Count - 1]))
         {
             points.Points.RemoveAt(points.Points.Count - 1);
