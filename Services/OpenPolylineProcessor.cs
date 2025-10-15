@@ -35,8 +35,7 @@ namespace MorphMuse.Services
                 }
 
                 // 4. Apply Douglas-Peucker simplification
-                SimplifiedPoints = PolylineSimplifier.SimplifyDouglasPeucker(translatedPoints, 0.1);
-//                SimplifiedPoints = PolylineSimplifier.SimplifyDouglasPeucker(translatedPoints, simplifyTolerance);
+                SimplifiedPoints = PolylineSimplifier.SimplifyDouglasPeucker(translatedPoints, simplifyTolerance);
             }
         }
     }

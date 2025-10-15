@@ -64,7 +64,50 @@ public static class CurveSampler
 
         return points;
     }
+    public static PointList CreatePointlistFromPolylineStepCopilot2(Polyline curve, double StepMax)
+    {
+        var points = new PointList();
 
+        // Aplica transformação, se houver
+        var polyline = (Polyline)curve.Clone();
+        if (polyline.ApplyTransformation())
+        {
+            polyline.Transform = Matrix4x4F.Identity;
+        }
+
+        double totalLength = polyline.GetPerimeter();
+        double currentLength = 0.0;
+
+        // Sempre adiciona o primeiro ponto
+        points.Add(polyline.FirstPoint);
+
+        // Amostragem contínua ao longo da curva
+        while (currentLength + StepMax < totalLength)
+        {
+            currentLength += StepMax;
+            double t = currentLength / totalLength;
+            Point3F pt = polyline.GetParametricPoint(t);
+            points.Add(pt);
+        }
+
+        // Sempre adiciona o último ponto
+        points.Add(polyline.LastPoint);
+
+        // Aplica transformação final, se necessário
+        if (!polyline.Transform.IsIdentity())
+        {
+            points.ApplyTransformation(polyline.Transform);
+        }
+
+        // Remove duplicata se curva for fechada
+        // Replace C# 8.0 index operator '^1' with explicit indexing for compatibility with C# 7.3
+        if (points.Points.Count > 1 && Point3F.Match(points.Points[0], points.Points[points.Points.Count - 1]))
+        {
+            points.Points.RemoveAt(points.Points.Count - 1);
+        }
+
+        return points;
+    }
     /// <summary>
     /// Generates sampled points from a set of ordered contours, using a generatrix and density parameters.
     /// Each contour is sampled according to its spacing and the provided density.
