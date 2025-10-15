@@ -27,7 +27,6 @@ internal static class PolylineSimplifier
             if (keep[i])
                 result.Add(points[i]);
         }
-
         return result;
     }
 

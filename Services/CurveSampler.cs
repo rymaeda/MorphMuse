@@ -1,9 +1,8 @@
 ﻿using CamBam.CAD;
 using CamBam.Geom;
 using MorphMuse.Services;
-using System; // Add this using directive at the top of the file
+using System;
 using System.Collections.Generic;
-using System.Linq;
 
 public static class CurveSampler
 {
@@ -18,14 +17,14 @@ public static class CurveSampler
             polyline.Transform = Matrix4x4F.Identity;
         }
 
-        // Extract segments and arcs from the polyline
+        // Extract the segments and arcs from the polyline
         Entity[] primitives = polyline.ToPrimitives();
 
         foreach (var primitive in primitives)
         {
             if (primitive is Arc arc)
             {
-                // Calculate number of points based on radius and StepMax
+                // Calculate the number of points based on the radius and StepMax
                 double arcLength = Math.Abs(arc.Sweep) * Math.PI / 180.0 * arc.Radius;
                 int steps = Math.Max(2, (int)Math.Ceiling(arcLength / StepMax));
 
@@ -66,6 +65,15 @@ public static class CurveSampler
         return points;
     }
 
+    /// <summary>
+    /// Generates sampled points from a set of ordered contours, using a generatrix and density parameters.
+    /// Each contour is sampled according to its spacing and the provided density.
+    /// </summary>
+    /// <param name="orderedContours">Contours ordered by generatrix.</param>
+    /// <param name="simplifiedGeratriz">Simplified generatrix points.</param>
+    /// <param name="baseDensity">Base density for sampling.</param>
+    /// <param name="minStep">Minimum allowed step size.</param>
+    /// <returns>A list of lists of sampled points for each contour.</returns>
     public static List<List<Point3F>> GenerateSampledPointsFromContours(
         List<List<Polyline>> orderedContours,
         List<Point3F> simplifiedGeratriz,
@@ -74,11 +82,13 @@ public static class CurveSampler
     {
         var sampledCurves = new List<List<Point3F>>();
 
+        // Iterate through each contour group.
         for (int i = 0; i < orderedContours.Count; i++)
         {
             List<Polyline> curves = orderedContours[i];
             double step = baseDensity;
 
+            // Adjust the sampling step based on the spacing between generatrix points.
             if (i < simplifiedGeratriz.Count - 1)
             {
                 Point3F p1 = simplifiedGeratriz[i];
@@ -87,12 +97,14 @@ public static class CurveSampler
 
                 double spacing = Geometry3F.Length(delta);
                 step = spacing * baseDensity;
+                // Ensure the step is not below the minimum allowed.
                 if (step < minStep)
                 {
                     step = minStep;
                 }
             }
 
+            // Sample each polyline in the current contour group.
             for (int j = 0; j < curves.Count; j++)
             {
                 Polyline curve = curves[j];
@@ -100,13 +112,13 @@ public static class CurveSampler
 
                 List<Point3F> converted = new List<Point3F>();
 
+                // Convert the PointList to a standard List<Point3F>.
                 for (int k = 0; k < rawPoints.Points.Count; k++)
                 {
                     converted.Add(rawPoints.Points[k]);
                 }
 
                 sampledCurves.Add(converted);
-
             }
         }
 

@@ -23,9 +23,8 @@ namespace PluginSettings
         public Units CurrentUnits { get; private set; } = Units.Millimeters;
 
         // Default values stored in millimeters
-        private readonly double defaultDouglasPeuckerTolerance = 0.001;
-        private readonly double defaultSamplingStep = 0.005;
-        //private readonly double defaultSmoothing = 0.025;
+        private readonly double defaultDouglasPeuckerTolerance = 0.02;
+        private readonly double defaultSamplingStep = 0.05;
 
         // Get current units from CamBam
         public static Units GetUnits()
@@ -64,12 +63,11 @@ namespace PluginSettings
         public AdaptiveParameters GetAdaptiveParametersFromGuideCurve(Polyline GuideCurve)
         {
             double diagonal = BoundingBoxDiagonal(GuideCurve); // drawing units
-            var config = new CamBamConfig();
-            double CambamStepResolution = config.STEPResolution;
+            double CambamStepResolution = CamBamConfig.Defaults.STEPResolution;
             CamBam.ThisApplication.AddLogMessage($"STEPResolution: {CambamStepResolution}.");
 
-            double dpTolerance = Clamp(diagonal * 0.005, 0.005, CambamStepResolution/2); // Douglas-Peucker tolerance
-            double samplingStep = Clamp(diagonal * 0.01, 0.01, CambamStepResolution); // Step size of arc discretization
+            double dpTolerance = Clamp(diagonal * 0.005, 0.001, CambamStepResolution/8); // Douglas-Peucker tolerance
+            double samplingStep = Clamp(diagonal * 0.05, 0.05, 4*CambamStepResolution); // Step size of arc discretization
 
             return new AdaptiveParameters
             {
