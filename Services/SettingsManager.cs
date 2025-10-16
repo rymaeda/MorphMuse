@@ -42,7 +42,7 @@ namespace PluginSettings
         public class AdaptiveParameters
         {
             public double DouglasPeuckerTolerance { get; set; }
-            public double SamplingStep { get; set; }
+            public double SamplingStepClosedPoly { get; set; }
         }
 
         // Calculates the diagonal of the bounding box for the guide curve using Polyline.GetExtrema
@@ -66,13 +66,13 @@ namespace PluginSettings
             double CambamStepResolution = CamBamConfig.Defaults.STEPResolution;
             CamBam.ThisApplication.AddLogMessage($"STEPResolution: {CambamStepResolution}.");
 
-            double dpTolerance = Clamp(diagonal * 0.001, 0.001, CambamStepResolution/2); // Douglas-Peucker tolerance
-            double samplingStep = Clamp(diagonal * 0.005, 0.005, CambamStepResolution); // Step size of arc discretization
+            double dpTolerance = Clamp(diagonal * 0.001, 0.001, CambamStepResolution/5); // Douglas-Peucker tolerance
+            double samplingStep = Clamp(diagonal * 0.005, 0.005, 4*CambamStepResolution); // Step size of arc discretization
 
             return new AdaptiveParameters
             {
                 DouglasPeuckerTolerance = dpTolerance,
-                SamplingStep = samplingStep
+                SamplingStepClosedPoly = samplingStep
             };
         }
 
@@ -104,7 +104,7 @@ namespace PluginSettings
             return new AdaptiveParameters
             {
                 DouglasPeuckerTolerance = defaultDouglasPeuckerTolerance,
-                SamplingStep = defaultSamplingStep
+                SamplingStepClosedPoly = defaultSamplingStep
             };
         }
     }

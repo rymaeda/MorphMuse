@@ -8,7 +8,7 @@ namespace MorphMuse.Services
     {
         public List<Point3F> SimplifiedPoints { get; private set; }
 
-        public OpenPolylineProcessor(Polyline openPolyline, double arcTolerance, double simplifyTolerance)
+        public OpenPolylineProcessor(Polyline openPolyline, double arcTolerance = 0.01, double simplifyTolerance = 0.01)
         {
             //CheckOpenPolylineStart(openPolyline);
             SimplifiedPoints = new List<Point3F>();
@@ -38,5 +38,20 @@ namespace MorphMuse.Services
                 SimplifiedPoints = PolylineSimplifier.SimplifyDouglasPeucker(translatedPoints, simplifyTolerance);
             }
         }
+
+        //public static void CheckOpenPolylineStart(Polyline openPoly)
+        //{
+        //    if (openPoly.Points.Count < 2)
+        //        return;
+
+        //    float firstHeight = (float)openPoly.Points[0].Point.X; // openpoly adjust translation axis here
+        //    float lastHeight = (float)openPoly.Points[openPoly.Points.Count - 1].Point.X;
+
+        //    if (firstHeight<lastHeight)
+        //    {
+        //        openPoly.Reverse();
+        //        CamBam.ThisApplication.AddLogMessage("Open Polyline was reverted!!!");
+        //    }
+        //}
     }
 }

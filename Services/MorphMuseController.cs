@@ -89,7 +89,9 @@ public class MorphMuseController
             : _settingsManager.GetDefaultAdaptiveParameters(); // Use centralized method for default values.
 
         double dpTolerance = SettingsManager.ConvertFromMillimeters(adaptiveParams.DouglasPeuckerTolerance, units);
-        double samplingStep = SettingsManager.ConvertFromMillimeters(adaptiveParams.SamplingStep, units);
+        double samplingStep = SettingsManager.ConvertFromMillimeters(adaptiveParams.SamplingStepClosedPoly, units)/6;
+        CamBam.ThisApplication.AddLogMessage($"dpTolerance: {dpTolerance}");
+        CamBam.ThisApplication.AddLogMessage($"samplingStep: {samplingStep}");
 
         var openCurveProcessor = new OpenPolylineProcessor(
             selectionManager.OpenPoly,
