@@ -84,8 +84,12 @@ public class MorphMuseController
         var units = SettingsManager.GetUnits();
 
         Polyline guideCurve = selectionManager.ClosedPoly != null ? selectionManager.ClosedPoly : null;
+        //var adaptiveParams = guideCurve != null
+        //    ? _settingsManager.GetAdaptiveParametersFromGuideCurve(guideCurve)
+        //    : _settingsManager.GetDefaultAdaptiveParameters(); // Use centralized method for default values.
+
         var adaptiveParams = guideCurve != null
-            ? _settingsManager.GetAdaptiveParametersFromGuideCurve(guideCurve)
+            ? _settingsManager.GetSmartAdaptiveParameters(guideCurve)
             : _settingsManager.GetDefaultAdaptiveParameters(); // Use centralized method for default values.
 
         double dpTolerance = SettingsManager.ConvertFromMillimeters(adaptiveParams.DouglasPeuckerTolerance, units);

@@ -4,7 +4,7 @@
     <layer name="Par défaut" color="255,255,255" pen="1.5">
       <objects>
         <pline id="7" Closed="true">
-          <ModificationCount>5</ModificationCount>
+          <ModificationCount>11</ModificationCount>
           <mat m="Identity" />
           <pts>
             <p b="0.41421356237309503">0,5,0</p>
@@ -18,7 +18,7 @@
           </pts>
         </pline>
         <pline id="11">
-          <ModificationCount>5</ModificationCount>
+          <ModificationCount>11</ModificationCount>
           <mat m="Identity" />
           <pts>
             <p>32,8,0</p>
@@ -34,7 +34,7 @@
     <layer name="MorphSurface0001" color="0,191,255" pen="1.5">
       <objects>
         <surface id="15">
-          <ModificationCount>2</ModificationCount>
+          <ModificationCount>4</ModificationCount>
           <mat m="Identity" />
           <verts>
             <v>0,5</v>
@@ -3917,7 +3917,7 @@
     <layer name="MorphSurface0002" color="0,191,255" pen="1.5">
       <objects>
         <surface id="16">
-          <ModificationCount>215</ModificationCount>
+          <ModificationCount>217</ModificationCount>
           <mat m="Identity" />
           <verts>
             <v>39,5</v>
@@ -25965,7 +25965,7 @@
     <layer name="MorphSurface0003" color="0,191,255" pen="1.5">
       <objects>
         <surface id="17">
-          <ModificationCount>142</ModificationCount>
+          <ModificationCount>144</ModificationCount>
           <mat m="Identity" />
           <verts>
             <v>0,-26</v>
@@ -40877,16 +40877,16 @@
     <layer name="Calque1" color="255,255,0" pen="1.5">
       <objects>
         <text id="18" p1="10,28,0" p2="-4,1,0" Height="10" Font="" align="bottom,left">
-          <ModificationCount>37</ModificationCount>
+          <ModificationCount>39</ModificationCount>
           <mat m="Identity" />mm</text>
         <text id="19" p1="10.8115234375,-39,0" p2="-1.1884765625,-2,0" Height="10" Font="" align="bottom,left">
-          <ModificationCount>18</ModificationCount>
+          <ModificationCount>20</ModificationCount>
           <mat m="Identity" />cm</text>
         <text id="20" p1="48,28,0" p2="-5,0,0" Height="10" Font="" align="bottom,left">
-          <ModificationCount>26</ModificationCount>
+          <ModificationCount>28</ModificationCount>
           <mat m="Identity" />inch</text>
         <text id="2" p1="-45.208984375,29.3564453125,0" p2="-59.208984375,2.3564453125,0" Height="10" Font="" align="bottom,left">
-          <ModificationCount>7</ModificationCount>
+          <ModificationCount>9</ModificationCount>
           <mat m="Identity" />mm new</text>
       </objects>
       <ModificationCount>1</ModificationCount>
@@ -40894,7 +40894,7 @@
     <layer name="MorphSurface001" color="0,191,255">
       <objects>
         <surface id="1">
-          <ModificationCount>4</ModificationCount>
+          <ModificationCount>6</ModificationCount>
           <mat m="Identity" />
           <verts>
             <v>-42,5</v>
@@ -43310,6 +43310,10 @@
           </faces>
         </surface>
       </objects>
+      <ModificationCount>0</ModificationCount>
+    </layer>
+    <layer name="MorphSurface002" color="0,191,255">
+      <objects />
       <ModificationCount>0</ModificationCount>
     </layer>
   </layers>

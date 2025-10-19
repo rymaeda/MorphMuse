@@ -59,15 +59,28 @@ namespace PluginSettings
             return diagonal; // drawing units
         }
 
-        // Calculates tolerance and step adaptively based on the object size
-        public AdaptiveParameters GetAdaptiveParametersFromGuideCurve(Polyline GuideCurve)
+        public AdaptiveParameters GetSmartAdaptiveParameters(Polyline guideCurve)
         {
-            double diagonal = BoundingBoxDiagonal(GuideCurve); // drawing units
-            double CambamStepResolution = CamBamConfig.Defaults.STEPResolution;
-            CamBam.ThisApplication.AddLogMessage($"STEPResolution: {CambamStepResolution}.");
+            double diagonal = BoundingBoxDiagonal(guideCurve); // units of the drawing
+            double diagonalMm = ConvertToMillimeters(diagonal, GetUnits());
+            double stepResolution = CamBamConfig.Defaults.STEPResolution;
 
-            double dpTolerance = Clamp(diagonal * 0.001, 0.001, CambamStepResolution/5); // Douglas-Peucker tolerance
-            double samplingStep = Clamp(diagonal * 0.005, 0.005, 4*CambamStepResolution); // Step size of arc discretization
+            // Normalized scale from 0.0 to 1.0
+            // Values above this will use the maximum tolerances
+            double scale = Math.Min(1.0, diagonalMm / 1000.0);
+
+            // Between these ranges
+            double dpMin = 0.01;
+            double dpMax = 0.3;
+            double stepMin = 0.2;
+            double stepMax = 2.0;
+
+            double dpTolerance = Lerp(dpMin, dpMax, scale);
+            double samplingStep = Lerp(stepMin, stepMax, scale);
+
+            // Clamping with cambam STEPResolution
+            dpTolerance = Clamp(dpTolerance, stepResolution / 10, stepResolution);
+            samplingStep = Clamp(samplingStep, stepResolution, 10 * stepResolution);
 
             return new AdaptiveParameters
             {
@@ -75,6 +88,13 @@ namespace PluginSettings
                 SamplingStepClosedPoly = samplingStep
             };
         }
+
+        // Interpolates linearly between min and max based on t (0.0 to 1.0)
+        private double Lerp(double min, double max, double t)
+        {
+            return min + (max - min) * t;
+        }
+        // Calculates tolerance and step adaptively based on the object size
 
         // Utility function to clamp values
         public static double Clamp(double value, double min, double max)
@@ -96,6 +116,21 @@ namespace PluginSettings
                     return valueInMm / 1000.0;
                 default: // Millimeters or unknown
                     return valueInMm;
+            }
+        }
+
+        public static double ConvertToMillimeters(double value, Units sourceUnits)
+        {
+            switch (sourceUnits)
+            {
+                case Units.Inches:
+                    return value * 25.4;
+                case Units.Centimeters:
+                    return value * 10.0;
+                case Units.Meters:
+                    return value * 1000.0;
+                default:
+                    return value; // already in mm
             }
         }
 
