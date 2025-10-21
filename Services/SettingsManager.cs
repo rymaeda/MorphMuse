@@ -79,8 +79,10 @@ namespace PluginSettings
             double samplingStep = Lerp(stepMin, stepMax, scale);
 
             // Clamping with cambam STEPResolution
-            dpTolerance = Clamp(dpTolerance, stepResolution / 10, stepResolution);
-            samplingStep = Clamp(samplingStep, stepResolution, 10 * stepResolution);
+            //dpTolerance = Clamp(dpTolerance, stepResolution / 10, stepResolution);
+            //samplingStep = Clamp(samplingStep, stepResolution, 10 * stepResolution);
+            dpTolerance = Clamp(dpTolerance, stepResolution / 50, stepResolution / 10);
+            samplingStep = Clamp(samplingStep, 0.05, 2 * stepResolution);
 
             return new AdaptiveParameters
             {

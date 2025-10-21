@@ -83,27 +83,25 @@ public class MorphMuseController
         // Use a instância da classe em vez de criar uma nova
         var units = SettingsManager.GetUnits();
 
+        // Retrieve adaptive parameters based on the guide curve or use defaults.
         Polyline guideCurve = selectionManager.ClosedPoly != null ? selectionManager.ClosedPoly : null;
-        //var adaptiveParams = guideCurve != null
-        //    ? _settingsManager.GetAdaptiveParametersFromGuideCurve(guideCurve)
-        //    : _settingsManager.GetDefaultAdaptiveParameters(); // Use centralized method for default values.
-
         var adaptiveParams = guideCurve != null
             ? _settingsManager.GetSmartAdaptiveParameters(guideCurve)
             : _settingsManager.GetDefaultAdaptiveParameters(); // Use centralized method for default values.
 
+        // Convert tolerances from millimeters to the current drawing units.
         double dpTolerance = SettingsManager.ConvertFromMillimeters(adaptiveParams.DouglasPeuckerTolerance, units);
-        double samplingStep = SettingsManager.ConvertFromMillimeters(adaptiveParams.SamplingStepClosedPoly, units)/6;
+        double samplingStep = SettingsManager.ConvertFromMillimeters(adaptiveParams.SamplingStepClosedPoly, units)/5;
         CamBam.ThisApplication.AddLogMessage($"dpTolerance: {dpTolerance}");
         CamBam.ThisApplication.AddLogMessage($"samplingStep: {samplingStep}");
 
+        // Process the open curve to obtain simplified reference points.
         var openCurveProcessor = new OpenPolylineProcessor(
             selectionManager.OpenPoly,
             samplingStep,
             dpTolerance
         );
 
-        //
         // Create set of closed curves according to the generatrix.
         var orderedClosedCurves = LayerGenerator.GenerateContoursByGeratrizOrder(
             selectionManager.ClosedPoly,

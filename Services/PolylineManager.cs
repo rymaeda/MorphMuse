@@ -1,8 +1,8 @@
 ﻿using CamBam.CAD;
 using CamBam.UI;
 using CamBam.Util;
-using CamBam.Geom;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -15,7 +15,7 @@ namespace MorphMuse.Services
         public int CounterOpenP { get; private set; }
         public int CounterClosedP { get; private set; }
 
-        private PolylineManager(Polyline closed, Polyline open)
+        public PolylineManager(Polyline closed, Polyline open)
         {
             ClosedPoly = closed;
             OpenPoly = open;
@@ -24,57 +24,102 @@ namespace MorphMuse.Services
         public static bool TryCreateFromSelection(out PolylineManager manager)
         {
             manager = null;
-            ICADView view = CamBamUI.MainUI.ActiveView;
 
-            if (view.SelectedEntities.Length == 0)
-            {
-                MessageBox.Show(TextTranslation.Translate("No selection."));
-                return false;
-            }
+            GetPolylinesFromSelection(out List<Polyline> closedPolys, out List<Polyline> openPolys);
 
-            Polyline closed = null;
-            Polyline open = null;
-            int closedCount = 0;
-            int openCount = 0;
-
-            foreach (Entity ent in view.SelectedEntities)
-            {
-                if (ent is Polyline poly)
-                {
-                    if (poly.Closed)
-                    {
-                        closed = poly;
-                        closedCount++;
-                    }
-                    else
-                    {
-                        open = poly;
-                        openCount++;
-                    }
-                }
-            }
+            int closedCount = closedPolys.Count;
+            int openCount = openPolys.Count;
 
             if (closedCount == 1 && openCount == 1)
             {
+                Polyline closed = closedPolys[0];
+                Polyline open = openPolys[0];
+
                 manager = new PolylineManager(closed, open)
                 {
                     CounterClosedP = closedCount,
                     CounterOpenP = openCount
                 };
-                float MaxOpenPolyAmplitude= GetOpenPolyEffectiveAmplitudeX(open);
+
+                float MaxOpenPolyAmplitude = GetOpenPolyEffectiveAmplitudeX(open);
                 CamBam.ThisApplication.AddLogMessage($"Open Polyline: X-Offset={MaxOpenPolyAmplitude:F4}");
+
                 float MaxNegativeOffset = FindMaxSafeNegativeOffsetBinarySearch(closed);
                 CamBam.ThisApplication.AddLogMessage($"Closed Polyline: MaxOffset={MaxNegativeOffset:F4}");
+
                 if (MaxOpenPolyAmplitude < MaxNegativeOffset)
                 {
-                    MessageBox.Show(TextTranslation.Translate("Warning: The open polyline's effective amplitude along the X axis\nexceeds the maximum negative offset of the closed polyline ({.\nThis plugin can't deal this yet."));
+                    MessageBox.Show(TextTranslation.Translate(
+                        $"Warning: The open polyline's effective amplitude along the X axis\nexceeds the maximum negative offset of the closed polyline ({MaxNegativeOffset:F4}).\nThis plugin can't deal with this yet."));
                     return false;
                 }
+
                 return true;
             }
+            else if (closedCount == 1 && openCount == 2)
+            {
+                MessageBox.Show(TextTranslation.Translate("Selected one closed Polyline and two and just two open Polylines."));
+            }
+            else if (closedCount == 0 && openCount == 2)
+            {
+                MessageBox.Show(TextTranslation.Translate("Selected two and just two open Polylines."));
+                return false;
+            }
 
-            //MessageBox.Show(TextTranslation.Translate("Please, select one and just one closed Polyline and\none and just one open Polyline."));
             return false;
+        }
+
+        public static void GetPolylinesFromSelection(out List<Polyline> closedPolys, out List<Polyline> openPolys)
+        {
+            closedPolys = new List<Polyline>();
+            openPolys = new List<Polyline>();
+
+            ICADView view = CamBamUI.MainUI.ActiveView;
+
+            foreach (object entObj in view.SelectedEntities)
+            {
+                Entity ent = entObj as Entity;
+                if (ent == null)
+                    continue;
+
+                Entity clone = (Entity)ent.Clone(); // Clonagem segura via Entity
+
+                switch (clone)
+                {
+                    case Polyline poly:
+                        if (poly.Closed) closedPolys.Add(poly);
+                        else openPolys.Add(poly);
+                        break;
+
+                    case Circle circle:
+                        {
+                            var poly = circle.ToPolyline();
+                            if (poly != null) closedPolys.Add(poly);
+                        }
+                        break;
+
+                    case Arc arc:
+                        {
+                            var poly = arc.ToPolyline();
+                            if (poly != null) openPolys.Add(poly);
+                        }
+                        break;
+
+                    case Line line:
+                        {
+                            var poly = line.ToPolyline();
+                            if (poly != null) openPolys.Add(poly);
+                        }
+                        break;
+
+                    case Spline spline:
+                        {
+                            var poly = spline.ToPolyline(0.01); // tolerância ajustável
+                            if (poly != null) openPolys.Add(poly);
+                        }
+                        continue; // já tratou Region, pula para o próximo
+                }
+            }
         }
         public static bool ValidateSelection(out PolylineManager selectionManager)
         {
