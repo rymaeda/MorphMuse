@@ -1,4 +1,5 @@
 ﻿using CamBam.CAD;
+using CamBam.Geom;
 using CamBam.UI;
 using CamBam.Util;
 using System;
@@ -87,6 +88,12 @@ namespace MorphMuse.Services
                 switch (clone)
                 {
                     case Polyline poly:
+                        if (poly.CanConvertToPolylines == true)
+                            poly = poly.ConvertToPolylines(true)[0];
+                        //if (poly.ApplyTransformation()) {
+                        //    poly.Transform = Matrix4x4F.Identity;
+                        //    poly.Update();
+                        //}
                         if (poly.Closed) closedPolys.Add(poly);
                         else openPolys.Add(poly);
                         break;
@@ -115,7 +122,9 @@ namespace MorphMuse.Services
                     case Spline spline:
                         {
                             var poly = spline.ToPolyline(0.01); // tolerância ajustável
-                            if (poly != null) openPolys.Add(poly);
+                                                                //if (poly != null) openPolys.Add(poly);
+                            if (poly.Closed) closedPolys.Add(poly);
+                            else openPolys.Add(poly);
                         }
                         continue; // já tratou Region, pula para o próximo
                 }

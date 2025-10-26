@@ -57,6 +57,24 @@ public class MorphMuseController
         // Generate the lateral surface between the simplified closed curves.
         SurfaceBuilderCopilot.GenerateLateralSurface(simplifiedClosedCurves, finalSurfacePoints, finalPointIndex, finalSurfaceFaces);
 
+        // Gera superfícies de fechamento superior por sub-polilinhas convexas
+        //List<Point3F> topmostSimplifiedCurve = simplifiedClosedCurves[simplifiedClosedCurves.Count - 1];
+        //double dpTolerance = 0.5; // Tolerância para simplificação das sub-polilinhas convexas
+        //var capSurfaces = ConvexCapBuilder.CloseNonConvexPolyline(topmostSimplifiedCurve, dpTolerance);
+        //foreach (var cap in capSurfaces)
+        //{
+        //    foreach (var face in cap.Faces)
+        //    {
+        //        Point3F pa = cap.Points[face.A];
+        //        Point3F pb = cap.Points[face.B];
+        //        Point3F pc = cap.Points[face.C];
+
+        //        int ia = Geometry3F.AddPoint(pa, finalSurfacePoints, finalPointIndex);
+        //        int ib = Geometry3F.AddPoint(pb, finalSurfacePoints, finalPointIndex);
+        //        int ic = Geometry3F.AddPoint(pc, finalSurfacePoints, finalPointIndex);
+        //        finalSurfaceFaces.Add(new TriangleFace(ia, ib, ic));
+        //    }
+        //}
         // Generate the cap surface using the topmost curve.
         List<Point3F> topmostSimplifiedCurve = simplifiedClosedCurves[simplifiedClosedCurves.Count - 1];
         Point3F topCapCenter = GetCentroid(topmostSimplifiedCurve);

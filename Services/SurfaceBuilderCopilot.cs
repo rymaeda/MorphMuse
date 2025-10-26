@@ -73,19 +73,19 @@ namespace MorphMuse.Services
         public static void GenerateCapSurface(List<Point3F> topCurve, Point3F center, Point3FArray points, Dictionary<Point3F, int> indexMap, List<TriangleFace> faces)
         {
             // Add the center point to the points list and get its index.
-            int centerIndex = AddPoint(center, points, indexMap);
+            int centerIndex = Geometry3F.AddPoint(center, points, indexMap);
 
             // For each consecutive segment of the curve, create a triangle between the center and the two segment points.
             for (int i = 0; i < topCurve.Count - 1; i++)
             {
-                int ia = AddPoint(topCurve[i], points, indexMap);         // Index of the current point
-                int ib = AddPoint(topCurve[i + 1], points, indexMap);     // Index of the next point
+                int ia = Geometry3F.AddPoint(topCurve[i], points, indexMap);         // Index of the current point
+                int ib = Geometry3F.AddPoint(topCurve[i + 1], points, indexMap);     // Index of the next point
                 faces.Add(new TriangleFace(centerIndex, ia, ib));         // Triangle: center → current point → next point
             }
 
             // Close the cap by connecting the last point to the first, forming the final triangle.
-            int iaLast = AddPoint(topCurve[topCurve.Count - 1], points, indexMap); // Last point of the curve
-            int ibFirst = AddPoint(topCurve[0], points, indexMap);                 // First point of the curve
+            int iaLast = Geometry3F.AddPoint(topCurve[topCurve.Count - 1], points, indexMap); // Last point of the curve
+            int ibFirst = Geometry3F.AddPoint(topCurve[0], points, indexMap);                 // First point of the curve
             faces.Add(new TriangleFace(centerIndex, iaLast, ibFirst));             // Final triangle to close the cap
         }
 
@@ -106,9 +106,9 @@ namespace MorphMuse.Services
                     Point3F pb = partialSurface.Points[face.B];
                     Point3F pc = partialSurface.Points[face.C];
 
-                    int ia = AddPoint(pa, points, indexMap);
-                    int ib = AddPoint(pb, points, indexMap);
-                    int ic = AddPoint(pc, points, indexMap);
+                    int ia = Geometry3F.AddPoint(pa, points, indexMap);
+                    int ib = Geometry3F.AddPoint(pb, points, indexMap);
+                    int ic = Geometry3F.AddPoint(pc, points, indexMap);
 
                     faces.Add(new TriangleFace(ia, ib, ic));
                 }
@@ -122,24 +122,24 @@ namespace MorphMuse.Services
         {
             if (IsDegenerate(a, b, c)) return;
 
-            int ia = AddPoint(a, points, pointIndex);
-            int ib = AddPoint(b, points, pointIndex);
-            int ic = AddPoint(c, points, pointIndex);
+            int ia = Geometry3F.AddPoint(a, points, pointIndex);
+            int ib = Geometry3F.AddPoint(b, points, pointIndex);
+            int ic = Geometry3F.AddPoint(c, points, pointIndex);
 
             // Orientação fixa: sempre a → c → b
             faces.Add(new TriangleFace(ia, ic, ib));
         }
 
-        private static int AddPoint(Point3F p, Point3FArray points, Dictionary<Point3F, int> indexMap)
-        {
-            if (!indexMap.TryGetValue(p, out int index))
-            {
-                index = points.Count;
-                points.Add(p);
-                indexMap[p] = index;
-            }
-            return index;
-        }
+        //public static int AddPoint(Point3F p, Point3FArray points, Dictionary<Point3F, int> indexMap)
+        //{
+        //    if (!indexMap.TryGetValue(p, out int index))
+        //    {
+        //        index = points.Count;
+        //        points.Add(p);
+        //        indexMap[p] = index;
+        //    }
+        //    return index;
+        //}
 
         private static bool IsDegenerate(Point3F a, Point3F b, Point3F c)
         {

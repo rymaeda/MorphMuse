@@ -53,5 +53,30 @@ namespace MorphMuse.Services
             int count = points.Count;
             return new Point3F(sumX / count, sumY / count, sumZ / count);
         }
+        public static double AngleBetween(Vector3F u, Vector3F v)
+        {
+            double dot = u.X * v.X + u.Y * v.Y + u.Z * v.Z;
+            double lenU = Geometry3F.Length(u);
+            double lenV = Geometry3F.Length(v);
+
+            if (lenU < 1e-8 || lenV < 1e-8)
+                return 0.0; // Vetores nulos ou quase nulos
+
+            double cosTheta = dot / (lenU * lenV);
+            cosTheta = Math.Max(-1.0, Math.Min(1.0, cosTheta)); // Clamping para evitar erros numéricos
+
+            return Math.Acos(cosTheta); // Retorna em radianos
+        }
+        public static int AddPoint(Point3F p, Point3FArray points, Dictionary<Point3F, int> indexMap)
+        {
+            int index;
+            if (!indexMap.TryGetValue(p, out index))
+            {
+                index = points.Count;
+                points.Add(p);
+                indexMap[p] = index;
+            }
+            return index;
+        }
     }
 }
