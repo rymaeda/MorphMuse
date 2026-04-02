@@ -1,4 +1,4 @@
-﻿using CamBam.CAD;
+using CamBam.CAD;
 using CamBam.Geom;
 using CamBam.UI;
 using MorphMuse;
@@ -8,25 +8,21 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
-using System.Linq; // Add this using directive at the top with other usings
+using System.Linq;
 
-// Main controller for the MorphMuse plugin, responsible for generating morph surfaces.
 public class MorphMuseController
 {
-    private readonly CamBamUI _ui; // Reference to the main CamBam UI.
-    private readonly SettingsManager _settingsManager; // Mova a instância para o nível da classe
+    private readonly CamBamUI _ui;
+    private readonly SettingsManager _settingsManager;
 
-    // Constructor receives the CamBam UI.
     public MorphMuseController(CamBamUI ui)
     {
         _ui = ui;
-        _settingsManager = new SettingsManager(); // Instancie no construtor
+        _settingsManager = new SettingsManager();
     }
 
-    // Main execution method for the plugin.
     public void Execute()
     {
-        // Validate if the selection contains one open and one closed polyline.
         if (!PolylineManager.ValidateSelection(out PolylineManager selectionManager))
         {
             MessageBox.Show(
@@ -34,99 +30,66 @@ public class MorphMuseController
                 "Invalid Selection.",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning
-            );// Show fallback form if selection is invalid.
+            );
             return;
         }
 
-        // Prepare and simplify the selected closed curves.
         var simplifiedClosedCurves = PrepareClosedCurves(selectionManager);
         if (simplifiedClosedCurves.Count < 2)
-            return; // Ensure there are at least two curves to generate the surface.
+            return;
 
-        // Save the current active layer name before creating a new layer for the surface.
         string originalLayerName = _ui.ActiveView.CADFile.ActiveLayerName;
         string surfaceLayerName = CreateUniqueLayer("MorphSurface");
         Layer layer = _ui.ActiveView.CADFile.Layers[surfaceLayerName];
-        layer.Color = Color.DeepSkyBlue; // Set the color of the new layer.
+        layer.Color = Color.DeepSkyBlue;
 
-        // Structures to store the final surface points and faces.
         Point3FArray finalSurfacePoints = new Point3FArray();
         Dictionary<Point3F, int> finalPointIndex = new Dictionary<Point3F, int>();
         List<TriangleFace> finalSurfaceFaces = new List<TriangleFace>();
 
-        // Generate the lateral surface between the simplified closed curves.
-        SurfaceBuilderCopilot.GenerateLateralSurface(simplifiedClosedCurves, finalSurfacePoints, finalPointIndex, finalSurfaceFaces);
+        // Gera a superfície lateral (atualmente assume curvas fechadas conforme seleção atual)
+        SurfaceBuilderCopilot.GenerateLateralSurface(simplifiedClosedCurves, finalSurfacePoints, finalPointIndex, finalSurfaceFaces, isClosed: true);
 
-        // Gera superfícies de fechamento superior por sub-polilinhas convexas
-        //List<Point3F> topmostSimplifiedCurve = simplifiedClosedCurves[simplifiedClosedCurves.Count - 1];
-        //double dpTolerance = 0.5; // Tolerância para simplificação das sub-polilinhas convexas
-        //var capSurfaces = ConvexCapBuilder.CloseNonConvexPolyline(topmostSimplifiedCurve, dpTolerance);
-        //foreach (var cap in capSurfaces)
-        //{
-        //    foreach (var face in cap.Faces)
-        //    {
-        //        Point3F pa = cap.Points[face.A];
-        //        Point3F pb = cap.Points[face.B];
-        //        Point3F pc = cap.Points[face.C];
-
-        //        int ia = Geometry3F.AddPoint(pa, finalSurfacePoints, finalPointIndex);
-        //        int ib = Geometry3F.AddPoint(pb, finalSurfacePoints, finalPointIndex);
-        //        int ic = Geometry3F.AddPoint(pc, finalSurfacePoints, finalPointIndex);
-        //        finalSurfaceFaces.Add(new TriangleFace(ia, ib, ic));
-        //    }
-        //}
-        // Generate the cap surface using the topmost curve.
+        // Gera a superfície de fechamento (cap) usando o novo método de Ear Clipping
         List<Point3F> topmostSimplifiedCurve = simplifiedClosedCurves[simplifiedClosedCurves.Count - 1];
-        Point3F topCapCenter = GetCentroid(topmostSimplifiedCurve);
-        SurfaceBuilderCopilot.GenerateCapSurface(topmostSimplifiedCurve, topCapCenter, finalSurfacePoints, finalPointIndex, finalSurfaceFaces);
+        SurfaceBuilderCopilot.GenerateCapSurface(topmostSimplifiedCurve, finalSurfacePoints, finalPointIndex, finalSurfaceFaces);
 
-        // Create the surface entity and add it to the CAD file.
         Surface surfaceEntity = new Surface
         {
             Points = finalSurfacePoints,
             Faces = finalSurfaceFaces.ToArray()
         };
+        
         CamBam.ThisApplication.AddLogMessage($"Number of unique vertices: {finalPointIndex.Count}");
         _ui.ActiveView.CADFile.Add(surfaceEntity);
 
-        // Restore the original layer and update the view.
         _ui.ActiveView.CADFile.SetActiveLayer(originalLayerName);
         _ui.ActiveView.ZoomToFit();
         _ui.ActiveView.RefreshView();
     }
 
-    // Prepares and simplifies the selected closed curves.
     private List<List<Point3F>> PrepareClosedCurves(PolylineManager selectionManager)
     {
-        // Use a instância da classe em vez de criar uma nova
         var units = SettingsManager.GetUnits();
-
-        // Retrieve adaptive parameters based on the guide curve or use defaults.
         Polyline guideCurve = selectionManager.ClosedPoly != null ? selectionManager.ClosedPoly : null;
         var adaptiveParams = guideCurve != null
             ? _settingsManager.GetSmartAdaptiveParameters(guideCurve)
-            : _settingsManager.GetDefaultAdaptiveParameters(); // Use centralized method for default values.
+            : _settingsManager.GetDefaultAdaptiveParameters();
 
-        // Convert tolerances from millimeters to the current drawing units.
         double dpTolerance = SettingsManager.ConvertFromMillimeters(adaptiveParams.DouglasPeuckerTolerance, units);
-        double samplingStep = SettingsManager.ConvertFromMillimeters(adaptiveParams.SamplingStepClosedPoly, units)/5;
-        CamBam.ThisApplication.AddLogMessage($"dpTolerance: {dpTolerance}");
-        CamBam.ThisApplication.AddLogMessage($"samplingStep: {samplingStep}");
+        double samplingStep = SettingsManager.ConvertFromMillimeters(adaptiveParams.SamplingStepClosedPoly, units) / 5;
 
-        // Process the open curve to obtain simplified reference points.
         var openCurveProcessor = new OpenPolylineProcessor(
             selectionManager.OpenPoly,
             samplingStep,
             dpTolerance
         );
 
-        // Create set of closed curves according to the generatrix.
         var orderedClosedCurves = LayerGenerator.GenerateContoursByGeratrizOrder(
             selectionManager.ClosedPoly,
             openCurveProcessor.SimplifiedPoints
         );
 
-        // Generates the sampled data points defined by the curves.
         var sampledClosedCurves = CurveSampler.GenerateSampledPointsFromContours(
             orderedClosedCurves,
             openCurveProcessor.SimplifiedPoints,
@@ -134,11 +97,9 @@ public class MorphMuseController
             dpTolerance
         );
 
-        // Simplify all sampled curves using Douglas-Peucker algorithm.
         return SimplifyAll(sampledClosedCurves, dpTolerance);
     }
 
-    // Simplifies all curves using the Douglas-Peucker algorithm.
     private List<List<Point3F>> SimplifyAll(List<List<Point3F>> curves, double tolerance)
     {
         var result = new List<List<Point3F>>();
@@ -147,42 +108,6 @@ public class MorphMuseController
         return result;
     }
 
-    // Calculates the centroid of a polygon (area centroid) given a list of points.
-    private Point3F GetCentroid(List<Point3F> points)
-    {
-        if (points == null || points.Count < 3)
-            return new Point3F(0, 0, 0);
-
-        // Assume all Z are equal (planar polygon)
-        double z0 = points[0].Z;
-
-        double area = 0;
-        double cx = 0;
-        double cy = 0;
-
-        int count = points.Count;
-        for (int i = 0; i < count; i++)
-        {
-            var p0 = points[i];
-            var p1 = points[(i + 1) % count];
-
-            double cross = p0.X * p1.Y - p1.X * p0.Y;
-            area += cross;
-            cx += (p0.X + p1.X) * cross;
-            cy += (p0.Y + p1.Y) * cross;
-        }
-
-        area *= 0.5;
-        if (Math.Abs(area) < 1e-8)
-            return new Point3F(0, 0, 0);
-
-        cx /= (6 * area);
-        cy /= (6 * area);
-
-        return new Point3F(cx, cy, z0);
-    }
-
-    // Creates a unique layer for the surface, avoiding duplicate names.
     private string CreateUniqueLayer(string baseName)
     {
         int index = 1;

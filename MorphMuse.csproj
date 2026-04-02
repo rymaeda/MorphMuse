@@ -12,14 +12,6 @@
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
-    <ShouldCreateLogs>True</ShouldCreateLogs>
-    <AdvancedSettingsExpanded>False</AdvancedSettingsExpanded>
-    <UpdateAssemblyVersion>False</UpdateAssemblyVersion>
-    <UpdateAssemblyFileVersion>False</UpdateAssemblyFileVersion>
-    <UpdateAssemblyInfoVersion>False</UpdateAssemblyInfoVersion>
-    <UpdatePackageVersion>False</UpdatePackageVersion>
-    <AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
-    <InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -113,7 +105,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Services\ConvexCapBuilder.cs" />
+    <Compile Include="Services\EarClippingTriangulator.cs" />
     <Compile Include="Services\FindConvergenceCentersAndCurves.cs" />
     <Compile Include="Services\MorphMuseController.cs" />
     <Compile Include="Services\CurveSampler.cs" />
@@ -154,9 +146,4 @@
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>IF "$(Platform)"=="x86" powershell -ExecutionPolicy Bypass -File "$(ProjectDir)zipping-x86.ps1"
-
-IF "$(Platform)"=="x64" powershell -ExecutionPolicy Bypass -File "$(ProjectDir)zipping-x64.ps1"</PostBuildEvent>
-  </PropertyGroup>
 </Project>

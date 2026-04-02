@@ -1,4 +1,4 @@
-﻿using CamBam.CAD;
+using CamBam.CAD;
 using CamBam.Geom;
 using System;
 using System.Collections.Generic;
@@ -8,22 +8,28 @@ namespace MorphMuse.Services
 {
     public static class SurfaceBuilderCopilot
     {
-        public static Surface BuildSurfaceBetweenCurves(List<Point3F> lower, List<Point3F> upper)
+        /// <summary>
+        /// Constrói uma superfície entre duas curvas (abertas ou fechadas).
+        /// </summary>
+        public static Surface BuildSurfaceBetweenCurves(List<Point3F> lower, List<Point3F> upper, bool isClosed = true)
         {
             var points = new Point3FArray();
             var pointIndex = new Dictionary<Point3F, int>();
             var faces = new List<TriangleFace>();
 
-            // Sincroniza a rotação da curva superior com a inferior
-            int matchIndex = FindClosestIndex(lower[0], upper);
-            upper = RotateCurve(upper, matchIndex);
+            // Sincroniza a rotação da curva superior com a inferior (apenas se forem fechadas)
+            if (isClosed)
+            {
+                int matchIndex = FindClosestIndex(lower[0], upper);
+                upper = RotateCurve(upper, matchIndex);
 
-            // Fecha as curvas se não forem fechadas
-            if (Geometry3F.Distance(lower[0], lower[lower.Count - 1]) > 1e-6)
-                lower.Add(lower[0]);
+                // Fecha as curvas se não forem fechadas (e deveriam ser)
+                if (Geometry3F.Distance(lower[0], lower[lower.Count - 1]) > 1e-6)
+                    lower.Add(lower[0]);
 
-            if (Geometry3F.Distance(upper[0], upper[upper.Count - 1]) > 1e-6)
-                upper.Add(upper[0]);
+                if (Geometry3F.Distance(upper[0], upper[upper.Count - 1]) > 1e-6)
+                    upper.Add(upper[0]);
+            }
 
             int i = 0, j = 0;
 
@@ -70,35 +76,32 @@ namespace MorphMuse.Services
             };
         }
 
-        public static void GenerateCapSurface(List<Point3F> topCurve, Point3F center, Point3FArray points, Dictionary<Point3F, int> indexMap, List<TriangleFace> faces)
+        /// <summary>
+        /// Gera a superfície de fechamento (cap) usando o algoritmo de Ear Clipping para suportar curvas côncavas.
+        /// </summary>
+        public static void GenerateCapSurface(List<Point3F> topCurve, Point3FArray points, Dictionary<Point3F, int> indexMap, List<TriangleFace> faces)
         {
-            // Add the center point to the points list and get its index.
-            int centerIndex = Geometry3F.AddPoint(center, points, indexMap);
-
-            // For each consecutive segment of the curve, create a triangle between the center and the two segment points.
-            for (int i = 0; i < topCurve.Count - 1; i++)
-            {
-                int ia = Geometry3F.AddPoint(topCurve[i], points, indexMap);         // Index of the current point
-                int ib = Geometry3F.AddPoint(topCurve[i + 1], points, indexMap);     // Index of the next point
-                faces.Add(new TriangleFace(centerIndex, ia, ib));         // Triangle: center → current point → next point
-            }
-
-            // Close the cap by connecting the last point to the first, forming the final triangle.
-            int iaLast = Geometry3F.AddPoint(topCurve[topCurve.Count - 1], points, indexMap); // Last point of the curve
-            int ibFirst = Geometry3F.AddPoint(topCurve[0], points, indexMap);                 // First point of the curve
-            faces.Add(new TriangleFace(centerIndex, iaLast, ibFirst));             // Final triangle to close the cap
+            // Substituímos o Triangle Fan pelo Ear Clipping para suportar polígonos côncavos
+            var capFaces = EarClippingTriangulator.Triangulate(topCurve, points, indexMap);
+            faces.AddRange(capFaces);
         }
 
-        public static void GenerateLateralSurface(List<List<Point3F>> simplifiedCurves, Point3FArray points, Dictionary<Point3F, int> indexMap, List<TriangleFace> faces)
+        /// <summary>
+        /// Gera a superfície lateral entre múltiplas curvas.
+        /// </summary>
+        public static void GenerateLateralSurface(List<List<Point3F>> simplifiedCurves, Point3FArray points, Dictionary<Point3F, int> indexMap, List<TriangleFace> faces, bool isClosed = true)
         {
             for (int i = 0; i < simplifiedCurves.Count - 1; i++)
             {
                 var lower = simplifiedCurves[i];
                 var upper = simplifiedCurves[i + 1];
 
-                AlignCurveToPrevious(lower, upper); // Align upper and lower points
+                if (isClosed)
+                {
+                    AlignCurveToPrevious(lower, upper); // Alinha apenas se forem fechadas
+                }
 
-                Surface partialSurface = SurfaceBuilderCopilot.BuildSurfaceBetweenCurves(lower, upper);
+                Surface partialSurface = BuildSurfaceBetweenCurves(lower, upper, isClosed);
 
                 foreach (var face in partialSurface.Faces)
                 {
@@ -129,17 +132,6 @@ namespace MorphMuse.Services
             // Orientação fixa: sempre a → c → b
             faces.Add(new TriangleFace(ia, ic, ib));
         }
-
-        //public static int AddPoint(Point3F p, Point3FArray points, Dictionary<Point3F, int> indexMap)
-        //{
-        //    if (!indexMap.TryGetValue(p, out int index))
-        //    {
-        //        index = points.Count;
-        //        points.Add(p);
-        //        indexMap[p] = index;
-        //    }
-        //    return index;
-        //}
 
         private static bool IsDegenerate(Point3F a, Point3F b, Point3F c)
         {
@@ -182,15 +174,8 @@ namespace MorphMuse.Services
                 rotated.AddRange(current.Take(bestOffset));
                 current.Clear();
                 current.AddRange(rotated);
-
-                //CamBam.ThisApplication.AddLogMessage($"[Copilot] Curva rotacionada por {bestOffset} posições.");
-            }
-            else
-            {
-                //CamBam.ThisApplication.AddLogMessage($"[Copilot] Curva já estava alinhada (offset = 0).");
             }
         }
-
 
         static int FindClosestIndex(Point3F target, List<Point3F> curve)
         {

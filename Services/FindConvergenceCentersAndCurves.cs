@@ -98,5 +98,17 @@ namespace MorphMuse.Services
             int count = poly.Points.Count;
             return new Point3F(cx / count, cy / count, cz / count);
         }
+
+        public static int AddPoint(Point3F p, Point3FArray points, Dictionary<Point3F, int> indexMap)
+        {
+            int index;
+            if (!indexMap.TryGetValue(p, out index))
+            {
+                index = points.Count;
+                points.Add(p);
+                indexMap[p] = index;
+            }
+            return index;
+        }
     }
 }
