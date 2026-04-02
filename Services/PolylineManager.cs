@@ -1,4 +1,4 @@
-﻿using CamBam.CAD;
+using CamBam.CAD;
 using CamBam.Geom;
 using CamBam.UI;
 using CamBam.Util;
@@ -13,6 +13,7 @@ namespace MorphMuse.Services
     {
         public Polyline ClosedPoly { get; private set; }
         public Polyline OpenPoly { get; private set; }
+        public List<Polyline> SelectedOpenPolys { get; private set; } // Nova lista para múltiplas polilinhas abertas
         public int CounterOpenP { get; private set; }
         public int CounterClosedP { get; private set; }
 
@@ -20,6 +21,15 @@ namespace MorphMuse.Services
         {
             ClosedPoly = closed;
             OpenPoly = open;
+            SelectedOpenPolys = new List<Polyline>();
+            if (open != null) SelectedOpenPolys.Add(open);
+        }
+
+        public PolylineManager(List<Polyline> openPolys)
+        {
+            SelectedOpenPolys = openPolys;
+            CounterOpenP = openPolys.Count;
+            CounterClosedP = 0;
         }
 
         public static bool TryCreateFromSelection(out PolylineManager manager)
@@ -31,6 +41,7 @@ namespace MorphMuse.Services
             int closedCount = closedPolys.Count;
             int openCount = openPolys.Count;
 
+            // Cenário A: 1 Fechada + 1 Aberta (Volume com tampa)
             if (closedCount == 1 && openCount == 1)
             {
                 Polyline closed = closedPolys[0];
@@ -43,10 +54,7 @@ namespace MorphMuse.Services
                 };
 
                 float MaxOpenPolyAmplitude = GetOpenPolyEffectiveAmplitudeX(open);
-                CamBam.ThisApplication.AddLogMessage($"Open Polyline: X-Offset={MaxOpenPolyAmplitude:F4}");
-
                 float MaxNegativeOffset = FindMaxSafeNegativeOffsetBinarySearch(closed);
-                CamBam.ThisApplication.AddLogMessage($"Closed Polyline: MaxOffset={MaxNegativeOffset:F4}");
 
                 if (MaxOpenPolyAmplitude < MaxNegativeOffset)
                 {
@@ -57,14 +65,19 @@ namespace MorphMuse.Services
 
                 return true;
             }
-            else if (closedCount == 1 && openCount == 2)
-            {
-                MessageBox.Show(TextTranslation.Translate("Selected one closed Polyline and two and just two open Polylines."));
-            }
+            // Cenário B: 2 Abertas (Superfície lateral apenas)
             else if (closedCount == 0 && openCount == 2)
             {
-                MessageBox.Show(TextTranslation.Translate("Selected two and just two open Polylines."));
-                return false;
+                manager = new PolylineManager(openPolys);
+                return true;
+            }
+            else
+            {
+                MessageBox.Show(TextTranslation.Translate(
+                    "Invalid Selection. Please select either:\n1. One closed and one open polyline (for volume with cap)\n2. Two open polylines (for surface only)"),
+                    "Invalid Selection",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
             }
 
             return false;
@@ -80,75 +93,57 @@ namespace MorphMuse.Services
             foreach (object entObj in view.SelectedEntities)
             {
                 Entity ent = entObj as Entity;
-                if (ent == null)
-                    continue;
+                if (ent == null) continue;
 
-                Entity clone = (Entity)ent.Clone(); // Clonagem segura via Entity
+                Entity clone = (Entity)ent.Clone();
 
                 switch (clone)
                 {
                     case Polyline poly:
                         if (poly.CanConvertToPolylines == true)
                             poly = poly.ConvertToPolylines(true)[0];
-                        //if (poly.ApplyTransformation()) {
-                        //    poly.Transform = Matrix4x4F.Identity;
-                        //    poly.Update();
-                        //}
                         if (poly.Closed) closedPolys.Add(poly);
                         else openPolys.Add(poly);
                         break;
 
                     case Circle circle:
-                        {
-                            var poly = circle.ToPolyline();
-                            if (poly != null) closedPolys.Add(poly);
-                        }
+                        var polyCircle = circle.ToPolyline();
+                        if (polyCircle != null) closedPolys.Add(polyCircle);
                         break;
 
                     case Arc arc:
-                        {
-                            var poly = arc.ToPolyline();
-                            if (poly != null) openPolys.Add(poly);
-                        }
+                        var polyArc = arc.ToPolyline();
+                        if (polyArc != null) openPolys.Add(polyArc);
                         break;
 
                     case Line line:
-                        {
-                            var poly = line.ToPolyline();
-                            if (poly != null) openPolys.Add(poly);
-                        }
+                        var polyLine = line.ToPolyline();
+                        if (polyLine != null) openPolys.Add(polyLine);
                         break;
 
                     case Spline spline:
-                        {
-                            var poly = spline.ToPolyline(0.01); // tolerância ajustável
-                                                                //if (poly != null) openPolys.Add(poly);
-                            if (poly.Closed) closedPolys.Add(poly);
-                            else openPolys.Add(poly);
-                        }
-                        continue; // já tratou Region, pula para o próximo
+                        var polySpline = spline.ToPolyline(0.01);
+                        if (polySpline.Closed) closedPolys.Add(polySpline);
+                        else openPolys.Add(polySpline);
+                        break;
                 }
             }
         }
+
         public static bool ValidateSelection(out PolylineManager selectionManager)
         {
-            if (!PolylineManager.TryCreateFromSelection(out selectionManager))
-                return false;
-            return true;
+            return TryCreateFromSelection(out selectionManager);
         }
 
         public static float FindMaxSafeNegativeOffsetBinarySearch(Polyline closedBase, float tolerance = 0.01f)
         {
             SizeF amplitude = GetAmplitudeXY(closedBase);
-            float minOffset = -Math.Min(amplitude.Width, amplitude.Height); // limite inferior
+            float minOffset = -Math.Min(amplitude.Width, amplitude.Height);
             float maxOffset = 0f;
             float safeOffset = 0f;
 
-            int iteration = 0;
-
             while (Math.Abs(maxOffset - minOffset) > tolerance)
             {
-                iteration++;
                 float mid = (minOffset + maxOffset) / 2f;
                 Polyline[] offsetResult = closedBase.CreateOffsetPolyline(mid, 0.01f);
 
@@ -156,20 +151,19 @@ namespace MorphMuse.Services
                                offsetResult.Length == 1 &&
                                offsetResult[0].Points.Count >= 3;
 
-                if (isValid)// Binary search criterion
+                if (isValid)
                 {
-                    safeOffset = mid; // update safe offset
-                    maxOffset = mid; // update upper bound
+                    safeOffset = mid;
+                    maxOffset = mid;
                 }
                 else
                 {
-                    minOffset = mid; // update lower bound
+                    minOffset = mid;
                 }
             }
             return safeOffset;
         }
 
-        // Method to get the amplitude along X and Y axis for the closed polyline
         public static SizeF GetAmplitudeXY(Polyline polyline)
         {
             PointF min = new PointF();
@@ -178,15 +172,12 @@ namespace MorphMuse.Services
             return new SizeF(max.X - min.X, max.Y - min.Y);
         }
 
-        // Method to get the effective amplitude along X axis for the open polyline
         public static float GetOpenPolyEffectiveAmplitudeX(Polyline poly)
         {
-            if (poly == null || poly.Points.Count < 2)
-                return 0; // or throw an exception
-
+            if (poly == null || poly.Points.Count < 2) return 0;
             float xStart = (float)poly.Points[0].Point.X;
             float xEnd = (float)poly.Points[poly.Points.Count - 1].Point.X;
-            return (xEnd - xStart); 
+            return (xEnd - xStart);
         }
     }
 }
