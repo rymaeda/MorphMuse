@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <CADFile xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="0.9.8.0" Name="testFile">
   <layers>
-    <layer name="Default" color="127,255,0">
+    <layer name="Par défaut" color="255,255,255" pen="1.5">
       <objects>
         <spline id="3" deg="3" flags="1" ktol="0" cptol="0" ftol="0">
-          <ModificationCount>155</ModificationCount>
+          <ModificationCount>234</ModificationCount>
           <mat m="Identity" />
           <knots>
             <k>0</k>
@@ -59,33 +59,33 @@
             <w>1</w>
           </weights>
           <ctrl>
-            <p>-23,-12</p>
-            <p>-26.0634197813981,-10.8217616225392</p>
-            <p>-31.25296424165,-14.0642291409625</p>
-            <p>-38,-18</p>
-            <p>-43.25296424165,-21.0642291409625</p>
-            <p>-42.9327619411228,-22.6505098338659</p>
-            <p>-47,-26</p>
-            <p>-51.4327619411228,-29.6505098338659</p>
-            <p>-53.2534956884025,-35.2160076650623</p>
-            <p>-50,-41</p>
-            <p>-44.2534956884025,-51.2160076650623</p>
-            <p>-37.681352239714,-57.379903411449</p>
-            <p>-29,-58</p>
-            <p>-23.681352239714,-58.379903411449</p>
-            <p>-24.6858792043659,-50.7592065903904</p>
-            <p>-22,-43</p>
-            <p>-20.1858792043659,-37.7592065903904</p>
-            <p>-19.82199228681,-37.5182391088889</p>
-            <p>-20,-32</p>
-            <p>-20.32199228681,-22.0182391088889</p>
-            <p>-19.5634197813981,-13.3217616225392</p>
-            <p>-23,-12</p>
+            <p>-15.5725062290008,-19.0657018086614</p>
+            <p>-17.767000998607,-16.6250094607089</p>
+            <p>-23.8629953221471,-17.1577575440731</p>
+            <p>-31.6614731709343,-17.6010712267831</p>
+            <p>-37.7330469325348,-17.9462170073176</p>
+            <p>-38.1679796492333,-19.5049503013376</p>
+            <p>-43.3126094497764,-20.6426207351504</p>
+            <p>-48.9195886457051,-21.88253394592</p>
+            <p>-53.0687660430908,-26.0146235398856</p>
+            <p>-52.7960924674385,-32.6452683536433</p>
+            <p>-52.3144812934235,-44.3566805269418</p>
+            <p>-49.2574366039009,-52.8325968814562</p>
+            <p>-41.8040399504417,-57.3267347092629</p>
+            <p>-37.2377016286194,-60.0800772107841</p>
+            <p>-34.6726519418789,-52.8340704093963</p>
+            <p>-28.7566225168756,-47.1402290122992</p>
+            <p>-24.7607644790174,-43.2944432194288</p>
+            <p>-24.3271394155536,-43.2449627157369</p>
+            <p>-21.9802650247185,-38.2474803293279</p>
+            <p>-17.7350812716163,-29.2076991139181</p>
+            <p>-13.1106962737188,-21.8036990931337</p>
+            <p>-15.5725062290008,-19.0657018086614</p>
           </ctrl>
           <fit />
         </spline>
         <spline id="4" deg="3" flags="0" ktol="0" cptol="0" ftol="0">
-          <ModificationCount>7</ModificationCount>
+          <ModificationCount>9</ModificationCount>
           <mat m="Identity" />
           <knots>
             <k>0</k>
@@ -130,7 +130,7 @@
           <fit />
         </spline>
         <rect id="8" Closed="true" p="9,-55,0" w="27" h="29">
-          <ModificationCount>167</ModificationCount>
+          <ModificationCount>169</ModificationCount>
           <mat m="0.388092921163953 0.921620249637794 0 0 -0.921620249637794 0.388092921163953 0 0 0 0 1 0 -12.6417069343257 -48.8860379593687 0 1" />
           <pts>
             <p>9,-55,0</p>
@@ -140,7 +140,7 @@
           </pts>
         </rect>
         <spline id="15" deg="3" flags="0" ktol="0" cptol="0" ftol="0">
-          <ModificationCount>3</ModificationCount>
+          <ModificationCount>5</ModificationCount>
           <mat m="Identity" />
           <knots>
             <k>0</k>
@@ -193,13 +193,8 @@
           </ctrl>
           <fit />
         </spline>
-      </objects>
-      <ModificationCount>0</ModificationCount>
-    </layer>
-    <layer name="Par défaut" color="255,255,255" pen="1.5">
-      <objects>
         <pline id="7" Closed="true">
-          <ModificationCount>20</ModificationCount>
+          <ModificationCount>22</ModificationCount>
           <mat m="Identity" />
           <pts>
             <p b="0.41421356237309503">17,13,3</p>
@@ -213,7 +208,7 @@
           </pts>
         </pline>
         <pline id="11">
-          <ModificationCount>22</ModificationCount>
+          <ModificationCount>24</ModificationCount>
           <mat m="Identity" />
           <pts>
             <p>12,13,3</p>
@@ -224,11 +219,11 @@
           </pts>
         </pline>
         <circle id="1" c="-36,22,0" d="37.20215047547655">
-          <ModificationCount>8</ModificationCount>
+          <ModificationCount>10</ModificationCount>
           <mat m="Identity" />
         </circle>
         <spline id="2" deg="2" flags="0" ktol="0" cptol="0" ftol="0">
-          <ModificationCount>8</ModificationCount>
+          <ModificationCount>10</ModificationCount>
           <mat m="Identity" />
           <knots>
             <k>0</k>
@@ -269,5 +264,5 @@
     <ToolProfile>Unspecified</ToolProfile>
   </MachiningOptions>
   <parts />
-  <ActiveLayer>Default</ActiveLayer>
+  <ActiveLayer>Par défaut</ActiveLayer>
 </CADFile>

@@ -105,8 +105,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Services\ConvexCapBuilder.cs" />
+    <Compile Include="Services\CurveInfo.cs" />
+    <Compile Include="Services\CurveSelectionDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Services\EarClippingTriangulator.cs" />
-    <Compile Include="Services\FindConvergenceCentersAndCurves.cs" />
     <Compile Include="Services\MorphMuseController.cs" />
     <Compile Include="Services\CurveSampler.cs" />
     <Compile Include="Services\ProjectLogger.cs" />
@@ -119,7 +123,6 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\PolylineManager.cs" />
-    <Compile Include="Services\SweepGenerator.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -130,6 +133,9 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <EmbeddedResource Include="Services\CurveSelectionDialog.resx">
+      <DependentUpon>CurveSelectionDialog.cs</DependentUpon>
+    </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

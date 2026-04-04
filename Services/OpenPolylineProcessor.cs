@@ -1,4 +1,4 @@
-﻿using CamBam.CAD;
+using CamBam.CAD;
 using CamBam.Geom;
 using System.Collections.Generic;
 
