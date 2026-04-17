@@ -31,7 +31,7 @@ public class MorphMuseController
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning
             );
-            return; // Error message already shown in ValidateSelection
+            return;
         }
 
         bool isTwoOpen = selectionManager.CounterClosedP == 0 && selectionManager.CounterOpenP == 2;
@@ -53,11 +53,10 @@ public class MorphMuseController
         Dictionary<Point3F, int> finalPointIndex = new Dictionary<Point3F, int>();
         List<TriangleFace> finalSurfaceFaces = new List<TriangleFace>();
 
-        // Generates the lateral surface (closed curves)
+        // Gera a superfície lateral
         SurfaceBuilderCopilot.GenerateLateralSurface(simplifiedCurves, finalSurfacePoints, finalPointIndex, finalSurfaceFaces, isClosed: !isTwoOpen);
 
-        // Gera a tampa (cap)
-        // Generates the cap
+        // Gera a superfície de fechamento (cap) apenas se for fechada
         if (!isTwoOpen)
         {
             List<Point3F> topmostSimplifiedCurve = simplifiedCurves[simplifiedCurves.Count - 1];

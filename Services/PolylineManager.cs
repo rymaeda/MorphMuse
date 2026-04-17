@@ -28,7 +28,7 @@ namespace MorphMuse.Services
         {
             OpenRailPoly = openRail;
             OpenFormPoly = openForm;
-            OpenPoly = openForm; // For compatibility with existing code that expects OpenPoly as the form
+            OpenPoly = openForm;
         }
 
         public static bool TryCreateFromSelection(out PolylineManager manager)
@@ -90,12 +90,6 @@ namespace MorphMuse.Services
             return false;
         }
 
-        public static void GetPolylinesFromSelection(out List<Polyline> closedPolys, out List<Polyline> openPolys)
-        {
-            closedPolys = new List<Polyline>();
-            openPolys = new List<Polyline>();
-        }
-
         public static void GetCurveInfoFromSelection(out List<CurveInfo> closedCurves, out List<CurveInfo> openCurves)
         {
             closedCurves = new List<CurveInfo>();
@@ -109,7 +103,6 @@ namespace MorphMuse.Services
                 if (ent == null)
                     continue;
 
-                // Work with the original entity, not a clone, to preserve ID and properties
                 switch (ent)
                 {
                     case Polyline poly:
@@ -118,7 +111,7 @@ namespace MorphMuse.Services
                             string originalType = poly.PrimitiveType;
                             CamBam.ThisApplication.AddLogMessage($"Found Polyline: ID={originalId}, Type={originalType}, Closed={poly.Closed}, Points={poly.Points.Count}");
                             
-                            if (poly.CanConvertToPolylines == true)
+                            if (poly.CanConvertToPolylines)
                             {
                                 var converted = poly.ConvertToPolylines(true);
                                 if (converted != null && converted.Length > 0)
@@ -178,7 +171,7 @@ namespace MorphMuse.Services
                             int originalId = spline.ID;
                             string originalType = spline.PrimitiveType;
                             CamBam.ThisApplication.AddLogMessage($"Found Spline: ID={originalId}, Type={originalType}");
-                            var poly = spline.ToPolyline(0.01); // tolerancia ajustavel
+                            var poly = spline.ToPolyline(0.01);
                             if (poly != null)
                             {
                                 var curveInfo = new CurveInfo(poly, originalId, originalType);
@@ -190,25 +183,21 @@ namespace MorphMuse.Services
                 }
             }
         }
+
         public static bool ValidateSelection(out PolylineManager selectionManager)
         {
-            if (!PolylineManager.TryCreateFromSelection(out selectionManager))
-                return false;
-            return true;
+            return TryCreateFromSelection(out selectionManager);
         }
 
         public static float FindMaxSafeNegativeOffsetBinarySearch(Polyline closedBase, float tolerance = 0.01f)
         {
             SizeF amplitude = GetAmplitudeXY(closedBase);
-            float minOffset = -Math.Min(amplitude.Width, amplitude.Height); // limite inferior
+            float minOffset = -Math.Min(amplitude.Width, amplitude.Height);
             float maxOffset = 0f;
             float safeOffset = 0f;
 
-            int iteration = 0;
-
             while (Math.Abs(maxOffset - minOffset) > tolerance)
             {
-                iteration++;
                 float mid = (minOffset + maxOffset) / 2f;
                 Polyline[] offsetResult = closedBase.CreateOffsetPolyline(mid, 0.01f);
 
@@ -216,20 +205,19 @@ namespace MorphMuse.Services
                                offsetResult.Length == 1 &&
                                offsetResult[0].Points.Count >= 3;
 
-                if (isValid)// Binary search criterion
+                if (isValid)
                 {
-                    safeOffset = mid; // update safe offset
-                    maxOffset = mid; // update upper bound
+                    safeOffset = mid;
+                    maxOffset = mid;
                 }
                 else
                 {
-                    minOffset = mid; // update lower bound
+                    minOffset = mid;
                 }
             }
             return safeOffset;
         }
 
-        // Method to get the amplitude along X and Y axis for the closed polyline
         public static SizeF GetAmplitudeXY(Polyline polyline)
         {
             PointF min = new PointF();
@@ -238,11 +226,10 @@ namespace MorphMuse.Services
             return new SizeF(max.X - min.X, max.Y - min.Y);
         }
 
-        // Method to get the effective amplitude along X axis for the open polyline
         public static float GetOpenPolyEffectiveAmplitudeX(Polyline poly)
         {
             if (poly == null || poly.Points.Count < 2)
-                return 0; // or throw an exception
+                return 0;
 
             float xStart = (float)poly.Points[0].Point.X;
             float xEnd = (float)poly.Points[poly.Points.Count - 1].Point.X;

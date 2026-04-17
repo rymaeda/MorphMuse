@@ -9,7 +9,7 @@ namespace MorphMuse.Services
     public static class SurfaceBuilderCopilot
     {
         /// <summary>
-        /// Constrói uma superfície entre duas curvas (abertas ou fechadas).
+        /// Builds a surface between two curves (open or closed).
         /// </summary>
         public static Surface BuildSurfaceBetweenCurves(List<Point3F> lower, List<Point3F> upper, bool isClosed = true)
         {
@@ -17,13 +17,13 @@ namespace MorphMuse.Services
             var pointIndex = new Dictionary<Point3F, int>();
             var faces = new List<TriangleFace>();
 
-            // Sincroniza a rotação da curva superior com a inferior (apenas se forem fechadas)
+            // Synchronize the rotation of the upper curve with the lower (only if they are closed)
             if (isClosed)
             {
                 int matchIndex = FindClosestIndex(lower[0], upper);
                 upper = RotateCurve(upper, matchIndex);
 
-                // Fecha as curvas se não forem fechadas (e deveriam ser)
+                // Close the curves if they are not closed (and should be)
                 if (Geometry3F.Distance(lower[0], lower[lower.Count - 1]) > 1e-6)
                     lower.Add(lower[0]);
 
@@ -33,7 +33,7 @@ namespace MorphMuse.Services
 
             int i = 0, j = 0;
 
-            // Triangulação adaptativa baseada em distância
+            // Adaptive triangulation based on distance
             while (i < lower.Count - 1 && j < upper.Count - 1)
             {
                 Point3F a = lower[i];
@@ -56,7 +56,7 @@ namespace MorphMuse.Services
                 }
             }
 
-            // Consome os pontos restantes
+            // Consume the remaining points
             while (i < lower.Count - 1)
             {
                 AddTriangle(lower[i], upper[j], lower[i + 1], points, pointIndex, faces);
@@ -77,17 +77,17 @@ namespace MorphMuse.Services
         }
 
         /// <summary>
-        /// Gera a superfície de fechamento (cap) usando o algoritmo de Ear Clipping para suportar curvas côncavas.
+        /// Generates the cap surface using the Ear Clipping algorithm to support concave curves.
         /// </summary>
         public static void GenerateCapSurface(List<Point3F> topCurve, Point3FArray points, Dictionary<Point3F, int> indexMap, List<TriangleFace> faces)
         {
-            // Substituímos o Triangle Fan pelo Ear Clipping para suportar polígonos côncavos
+            // We replaced the Triangle Fan with Ear Clipping to support concave polygons
             var capFaces = EarClippingTriangulator.Triangulate(topCurve, points, indexMap);
             faces.AddRange(capFaces);
         }
 
         /// <summary>
-        /// Gera a superfície lateral entre múltiplas curvas.
+        /// Generates the lateral surface between multiple curves.
         /// </summary>
         public static void GenerateLateralSurface(List<List<Point3F>> simplifiedCurves, Point3FArray points, Dictionary<Point3F, int> indexMap, List<TriangleFace> faces, bool isClosed = true)
         {
@@ -98,7 +98,7 @@ namespace MorphMuse.Services
 
                 if (isClosed)
                 {
-                    AlignCurveToPrevious(lower, upper); // Alinha apenas se forem fechadas
+                    AlignCurveToPrevious(lower, upper); // Align only if they are closed
                 }
 
                 Surface partialSurface = BuildSurfaceBetweenCurves(lower, upper, isClosed);
@@ -129,7 +129,7 @@ namespace MorphMuse.Services
             int ib = Geometry3F.AddPoint(b, points, pointIndex);
             int ic = Geometry3F.AddPoint(c, points, pointIndex);
 
-            // Orientação fixa: sempre a → c → b
+            // Fixed orientation: always a → c → b
             faces.Add(new TriangleFace(ia, ic, ib));
         }
 
