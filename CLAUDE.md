@@ -74,6 +74,8 @@ Todo log de diagnóstico do plugin usa:
 
 Isso escreve na janela de Output do CamBam. **Limitação conhecida**: mensagens de log não podem ser copiadas pelo usuário diretamente da UI do CamBam. Para depuração que precise ser copiada/exportada, escreva a informação na propriedade `.Tag` de uma entidade (`Surface.Tag`, por exemplo), que pode ser inspecionada e copiada no painel de propriedades do CamBam.
 
+**Gotcha de diagnóstico**: para inspecionar saídas de reflection/debug que precisem ser copiadas, escreva o resultado (string formatada) na propriedade `.Tag` de uma entidade visível no painel de propriedades do CamBam — não confie em `CamBam.ThisApplication.AddLogMessage` para esse fim.
+
 ---
 
 ## 6. Algoritmos Centrais do Domínio
@@ -108,6 +110,54 @@ Converte segmentos de `Polyline` (via `ToPrimitives()`) em pontos discretos:
 - Arcos: número de pontos proporcional ao comprimento do arco (`raio * sweep_rad`) dividido pelo passo máximo (`StepMax`).
 - Linhas: apenas os dois extremos são adicionados.
 - Remove ponto duplicado de fechamento via `Point3F.Match(...)`.
+
+### 6.6 Guia Prático de Implementação de Undo
+
+O CamBam **não possui suporte nativo para desfazer a criação de um `Layer`**. Esta seção documenta a investigação completa realizada neste projeto — incluindo abordagens que **falharam** — para evitar retrabalho em features futuras.
+
+#### 6.6.1 Métodos disponíveis no `UndoBuffer` (via reflection/disassembly)
+
+Não existe overload `Add(Layer)` dedicado, nem método `AddLayerCreation()`. O `Layer` (`CamBam.CAD.Layer`) implementa apenas `ICloneable` e `IPropertyChanged` — nenhuma interface de undo explícita.
+
+#### 6.6.2 Abordagens testadas e seus resultados
+
+| # | Abordagem | Resultado |
+|---|---|---|
+| 1 | `UndoBuffer.Add(layer.Entities)` registrado **antes** de popular a coleção | ❌ Falso positivo inicial — funcionou na primeira execução, mas `Ctrl+Z` repetido passou a remover entidades **não relacionadas** do documento |
+| 2 | `UndoBuffer.Add(cadFile.Layers)` (a `LayerCollection` inteira) junto com `Add(layer.Entities)` | ❌ Mesmo problema — múltiplos `Add()` no mesmo `AddUndoPoint` geram múltiplos passos de undo distintos, não um único passo atômico |
+| 3 | `UndoBuffer.Add(surfaceEntity)` **após** `cadFile.Add(surfaceEntity)`, sem registrar a coleção `layer.Entities` | ✅ **Funciona corretamente** — um único `Ctrl+Z` remove apenas a entidade criada, sem efeitos colaterais |
+| 4 | Deixar o `Layer` órfão (vazio) após o undo da entidade | ⚠️ Esperado — não há undo nativo de layer; compensado via cleanup manual (ver 6.6.4) |
+
+**Lição aprendida**: Cada chamada a `UndoBuffer.Add(...)` dentro do mesmo `AddUndoPoint` parece ser tratada como uma entrada separada na pilha de undo em algumas versões do CamBam. Registrar múltiplos objetos (coleção + entidade) pode fazer com que `Ctrl+Z` sucessivos desfaçam operações não relacionadas antes de chegar à mudança desejada. **Regra prática: registre o mínimo possível — idealmente apenas a entidade recém-criada.**
+
+#### 6.6.3 Padrão correto (implementado em `MorphMuseController.Execute`)
+
+#### 6.6.4 Compensação do layer órfão: cleanup manual
+
+Como o `Layer` criado nunca é removido pelo `Ctrl+Z`, implemente uma rotina de limpeza executada **no início** de cada execução do plugin, antes de criar um novo layer:
+
+**Efeito colateral aceito**: após `Ctrl+Z`, o layer permanece visível (vazio) na árvore do CAD até a próxima execução do plugin, quando é silenciosamente removido. Isso é uma limitação da API, não um bug do plugin.
+
+#### 6.6.5 Try/Catch + rollback manual para erros durante a geração
+
+Como a criação do layer ocorre fora do escopo do `UndoBuffer`, envolva a geração da superfície em `try/catch` e remova o layer manualmente se a operação falhar antes de qualquer entidade ser adicionada:
+
+#### 6.6.6 Como descobrir novos métodos de undo em versões futuras do CamBam
+
+Se a versão do CamBam mudar, revalide a API via reflection antes de assumir que o comportamento documentado ainda se aplica:
+
+#### 6.6.7 Teste manual recomendado (incluir em toda PR que toque no fluxo de undo)
+
+1. Selecione curvas válidas e execute o plugin.
+2. Verifique que o layer `MorphSurfaceXXX` foi criado com a superfície azul (`DeepSkyBlue`).
+3. Pressione `Ctrl+Z` **uma única vez**.
+4. **Esperado**: a superfície desaparece; o layer permanece vazio na árvore.
+5. Pressione `Ctrl+Z` novamente.
+6. **Esperado**: nenhuma outra entidade do documento é afetada (regressão do problema original).
+7. Pressione `Ctrl+Y` (Redo).
+8. **Esperado**: a superfície reaparece.
+9. Execute o plugin novamente.
+10. **Esperado**: o layer vazio anterior é removido silenciosamente antes da criação do novo layer.
 
 ---
 

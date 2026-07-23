@@ -135,6 +135,7 @@
     <EmbeddedResource Include="Services\CurveSelectionDialog.resx">
       <DependentUpon>CurveSelectionDialog.cs</DependentUpon>
     </EmbeddedResource>
+    <None Include="CLAUDE.md" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -150,6 +151,9 @@
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="imagem01.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
