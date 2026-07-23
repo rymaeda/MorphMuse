@@ -41,12 +41,19 @@ public class MorphMuseController
             return;
 
         string originalLayerName = _ui.ActiveView.CADFile.ActiveLayerName;
+
+        // Create an undo point BEFORE any layer/entity modification
+        CamBamUI.MainUI.UndoBuffer.AddUndoPoint("MorphMuse Surface Generation");
+
+        // Register the Layers collection itself so the undo system
+        // can also remove the newly created layer on Undo.
+        CamBamUI.MainUI.UndoBuffer.Add(_ui.ActiveView.CADFile.Layers);
+
         string surfaceLayerName = CreateUniqueLayer("MorphSurface");
         Layer layer = _ui.ActiveView.CADFile.Layers[surfaceLayerName];
         layer.Color = Color.DeepSkyBlue;
 
-        // Create an undo point before adding the surface
-        CamBamUI.MainUI.UndoBuffer.AddUndoPoint("MorphMuse Surface Generation");
+        // Register the layer's entities collection so added surfaces are also undoable
         CamBamUI.MainUI.UndoBuffer.Add(layer.Entities);
 
         Point3FArray finalSurfacePoints = new Point3FArray();
@@ -68,7 +75,7 @@ public class MorphMuseController
             Points = finalSurfacePoints,
             Faces = finalSurfaceFaces.ToArray()
         };
-        
+
         CamBam.ThisApplication.AddLogMessage($"Number of unique vertices: {finalPointIndex.Count}");
         _ui.ActiveView.CADFile.Add(surfaceEntity);
 

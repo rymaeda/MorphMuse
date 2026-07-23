@@ -111,7 +111,7 @@ namespace MorphMuse.Services
                             string originalType = poly.PrimitiveType;
                             CamBam.ThisApplication.AddLogMessage($"Found Polyline: ID={originalId}, Type={originalType}, Closed={poly.Closed}, Points={poly.Points.Count}");
                             
-                            if (poly.CanConvertToPolylines)
+                                if (poly.CanConvertToPolylines)
                             {
                                 var converted = poly.ConvertToPolylines(true);
                                 if (converted != null && converted.Length > 0)
