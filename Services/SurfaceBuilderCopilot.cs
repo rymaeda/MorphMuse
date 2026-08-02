@@ -118,6 +118,82 @@ namespace MorphMuse.Services
             }
         }
 
+        /// <summary>
+        /// Generates the lateral surface between grouped levels, where each level may contain
+        /// one or more disjoint contours (e.g. when a closed rail's offset splits near a
+        /// narrow section). Only the dominant contour (largest perimeter) of each level is
+        /// used to connect to the next level's dominant contour. Any secondary contours are
+        /// returned so the caller can cap them individually and avoid open/duplicated meshes.
+        /// </summary>
+        /// <param name="groupedLevels">Levels ordered by generatrix, each with one or more contours.</param>
+        /// <param name="points">Shared vertex array being built.</param>
+        /// <param name="indexMap">Shared vertex deduplication map.</param>
+        /// <param name="faces">Shared face list being built.</param>
+        /// <param name="isClosed">Whether the contours are closed curves.</param>
+        /// <returns>The list of secondary (non-dominant) contours per level, in order, that still need capping.</returns>
+        public static List<List<Point3F>> GenerateLateralSurfaceGrouped(
+            List<List<List<Point3F>>> groupedLevels,
+            Point3FArray points,
+            Dictionary<Point3F, int> indexMap,
+            List<TriangleFace> faces,
+            bool isClosed = true)
+        {
+            var secondaryContours = new List<List<Point3F>>();
+
+            // Pick the dominant contour (largest perimeter) for each level.
+            var dominantPerLevel = new List<List<Point3F>>();
+
+            foreach (var level in groupedLevels)
+            {
+                if (level.Count == 0) continue;
+
+                List<Point3F> dominant = level[0];
+                double dominantPerimeter = CalculatePerimeter(dominant);
+
+                for (int k = 1; k < level.Count; k++)
+                {
+                    double perimeter = CalculatePerimeter(level[k]);
+                    if (perimeter > dominantPerimeter)
+                    {
+                        // The previous dominant becomes secondary (smaller) and needs its own cap.
+                        secondaryContours.Add(dominant);
+                        dominant = level[k];
+                        dominantPerimeter = perimeter;
+                    }
+                    else
+                    {
+                        secondaryContours.Add(level[k]);
+                    }
+                }
+
+                dominantPerLevel.Add(dominant);
+            }
+
+            // Build the lateral surface using only the dominant contour of each level.
+            GenerateLateralSurface(dominantPerLevel, points, indexMap, faces, isClosed);
+
+            return secondaryContours;
+        }
+
+        /// <summary>
+        /// Calculates the perimeter of a (possibly open) point list, used to determine
+        /// the dominant contour when a level contains multiple disjoint contours.
+        /// </summary>
+        private static double CalculatePerimeter(List<Point3F> contour)
+        {
+            double perimeter = 0;
+            for (int i = 0; i < contour.Count - 1; i++)
+            {
+                perimeter += Geometry3F.Distance(contour[i], contour[i + 1]);
+            }
+            // Include the closing segment for closed contours.
+            if (contour.Count > 2)
+            {
+                perimeter += Geometry3F.Distance(contour[contour.Count - 1], contour[0]);
+            }
+            return perimeter;
+        }
+
         private static void AddTriangle(Point3F a, Point3F b, Point3F c,
                                 Point3FArray points,
                                 Dictionary<Point3F, int> pointIndex,
@@ -147,6 +223,18 @@ namespace MorphMuse.Services
             int m = previous.Count;
             if (n < 3 || m < 3) return;
 
+            // Ensure both curves wind in the same direction before attempting to
+            // align by rotation. If they wind in opposite directions, a simple
+            // rotation can never produce a correct point-to-point correspondence:
+            // it will end up connecting points on one side of `previous` to the
+            // points on the OPPOSITE side of `current`, producing crossed/tangled
+            // triangles in the lateral surface (visible as a disordered cap between
+            // the last two closed contours).
+            if (SignedArea(previous) * SignedArea(current) < 0)
+            {
+                current.Reverse();
+            }
+
             int minCount = Math.Min(n, m);
             double bestScore = double.MaxValue;
             int bestOffset = 0;
@@ -175,6 +263,25 @@ namespace MorphMuse.Services
                 current.Clear();
                 current.AddRange(rotated);
             }
+        }
+
+        /// <summary>
+        /// Computes the signed area (via the 2D shoelace formula, projected on XY) of a
+        /// closed point loop. The sign indicates winding direction: positive for
+        /// counter-clockwise, negative for clockwise. Used to detect and correct winding
+        /// mismatches between consecutive contours before stitching the lateral surface.
+        /// </summary>
+        private static double SignedArea(List<Point3F> curve)
+        {
+            double area = 0;
+            int count = curve.Count;
+            for (int i = 0; i < count; i++)
+            {
+                Point3F a = curve[i];
+                Point3F b = curve[(i + 1) % count];
+                area += (a.X * b.Y) - (b.X * a.Y);
+            }
+            return area * 0.5;
         }
 
         static int FindClosestIndex(Point3F target, List<Point3F> curve)

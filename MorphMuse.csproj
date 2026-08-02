@@ -136,6 +136,7 @@
       <DependentUpon>CurveSelectionDialog.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="CLAUDE.md" />
+    <None Include="CONTRIBUTING.md" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

@@ -3,6 +3,7 @@ using CamBam.Geom;
 using MorphMuse.Services;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public static class CurveSampler
 {
@@ -68,6 +69,9 @@ public static class CurveSampler
     /// <summary>
     /// Generates sampled points from a set of ordered contours, using a generatrix and density parameters.
     /// Each contour is sampled according to its spacing and the provided density.
+    /// WARNING: This flattens all contours into a single list, losing the "same level" grouping.
+    /// Use <see cref="GenerateGroupedSampledPointsFromContours"/> when a level may contain
+    /// multiple disjoint contours (e.g. offset splits near a closed rail's narrow sections).
     /// </summary>
     /// <param name="orderedContours">Contours ordered by generatrix.</param>
     /// <param name="simplifiedGeratriz">Simplified generatrix points.</param>
@@ -80,9 +84,36 @@ public static class CurveSampler
         double baseDensity,
         double minStep)
     {
-        var sampledCurves = new List<List<Point3F>>();
+        var grouped = GenerateGroupedSampledPointsFromContours(orderedContours, simplifiedGeratriz, baseDensity, minStep);
 
-        // Iterate through each contour group.
+        var sampledCurves = new List<List<Point3F>>();
+        foreach (var level in grouped)
+        {
+            sampledCurves.AddRange(level);
+        }
+
+        return sampledCurves;
+    }
+
+    /// <summary>
+    /// Generates sampled points from a set of ordered contours, preserving the grouping by
+    /// generatrix level. Each level may contain one or more disjoint contours (e.g. when an
+    /// offset operation on a closed rail splits into multiple polylines near a narrow section).
+    /// </summary>
+    /// <param name="orderedContours">Contours ordered by generatrix, grouped by level.</param>
+    /// <param name="simplifiedGeratriz">Simplified generatrix points.</param>
+    /// <param name="baseDensity">Base density for sampling.</param>
+    /// <param name="minStep">Minimum allowed step size.</param>
+    /// <returns>A list of levels, each containing a list of sampled contours (point lists).</returns>
+    public static List<List<List<Point3F>>> GenerateGroupedSampledPointsFromContours(
+        List<List<Polyline>> orderedContours,
+        List<Point3F> simplifiedGeratriz,
+        double baseDensity,
+        double minStep)
+    {
+        var sampledLevels = new List<List<List<Point3F>>>();
+
+        // Iterate through each contour group (level).
         for (int i = 0; i < orderedContours.Count; i++)
         {
             List<Polyline> curves = orderedContours[i];
@@ -104,7 +135,9 @@ public static class CurveSampler
                 }
             }
 
-            // Sample each polyline in the current contour group.
+            var levelContours = new List<List<Point3F>>();
+
+            // Sample each polyline in the current contour group (same level).
             for (int j = 0; j < curves.Count; j++)
             {
                 Polyline curve = curves[j];
@@ -118,10 +151,15 @@ public static class CurveSampler
                     converted.Add(rawPoints.Points[k]);
                 }
 
-                sampledCurves.Add(converted);
+                if (converted.Count >= 3)
+                {
+                    levelContours.Add(converted);
+                }
             }
+
+            sampledLevels.Add(levelContours);
         }
 
-        return sampledCurves;
+        return sampledLevels;
     }
 }

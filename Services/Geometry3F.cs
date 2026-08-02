@@ -1,5 +1,4 @@
-﻿using CamBam.CAD;
-using CamBam.Geom;
+﻿using CamBam.Geom;
 using System;
 using System.Collections.Generic;
 
@@ -46,6 +45,25 @@ namespace MorphMuse.Services
                 indexMap[p] = index;
             }
             return index;
+        }
+
+        /// <summary>
+        /// Calculates the absolute 2D (XY plane) area of a closed polyline point list
+        /// using the Shoelace formula. Used to filter out spurious near-zero-area
+        /// loops that offset algorithms can generate near narrow/concave sections.
+        /// </summary>
+        public static double CalculatePolygonArea2D(IList<Point3F> polygon)
+        {
+            if (polygon == null || polygon.Count < 3) return 0;
+
+            double area = 0;
+            for (int i = 0; i < polygon.Count; i++)
+            {
+                Point3F p1 = polygon[i];
+                Point3F p2 = polygon[(i + 1) % polygon.Count];
+                area += (p1.X * p2.Y) - (p2.X * p1.Y);
+            }
+            return Math.Abs(area) * 0.5;
         }
     }
 }

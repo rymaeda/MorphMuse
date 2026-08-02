@@ -36,10 +36,6 @@ public class MorphMuseController
 
         bool isTwoOpen = selectionManager.CounterClosedP == 0 && selectionManager.CounterOpenP == 2;
 
-        var simplifiedCurves = isTwoOpen ? PrepareOpenCurves(selectionManager) : PrepareClosedCurves(selectionManager);
-        if (simplifiedCurves.Count < 2)
-            return;
-
         string originalLayerName = _ui.ActiveView.CADFile.ActiveLayerName;
 
         // Create an undo point BEFORE any layer/entity modification
@@ -60,14 +56,37 @@ public class MorphMuseController
         Dictionary<Point3F, int> finalPointIndex = new Dictionary<Point3F, int>();
         List<TriangleFace> finalSurfaceFaces = new List<TriangleFace>();
 
-        // Gera a superfície lateral
-        SurfaceBuilderCopilot.GenerateLateralSurface(simplifiedCurves, finalSurfacePoints, finalPointIndex, finalSurfaceFaces, isClosed: !isTwoOpen);
-
-        // Gera a superfície de fechamento (cap) apenas se for fechada
-        if (!isTwoOpen)
+        if (isTwoOpen)
         {
-            List<Point3F> topmostSimplifiedCurve = simplifiedCurves[simplifiedCurves.Count - 1];
-            SurfaceBuilderCopilot.GenerateCapSurface(topmostSimplifiedCurve, finalSurfacePoints, finalPointIndex, finalSurfaceFaces);
+            // Two open curves flow: no risk of an offset splitting into multiple
+            // disjoint contours per level, so the flattened (legacy) path is safe.
+            var simplifiedCurves = PrepareOpenCurves(selectionManager);
+            if (simplifiedCurves.Count < 2)
+                return;
+
+            SurfaceBuilderCopilot.GenerateLateralSurface(simplifiedCurves, finalSurfacePoints, finalPointIndex, finalSurfaceFaces, isClosed: false);
+        }
+        else
+        {
+            // Closed rail flow: the offset of a closed base polyline can, in rare
+            // cases, still split into multiple contours near narrow/concave sections.
+            // Spurious near-zero-area artifacts are already filtered out in
+            // LayerGenerator, so here we only need to pick the single dominant
+            // (largest perimeter) contour per level to keep the surface connected
+            // and avoid generating disconnected/floating mesh fragments.
+            var groupedLevels = PrepareClosedCurvesGrouped(selectionManager);
+            if (groupedLevels.Count < 2)
+                return;
+
+            var dominantCurves = SelectDominantContourPerLevel(groupedLevels);
+            if (dominantCurves.Count < 2)
+                return;
+
+            SurfaceBuilderCopilot.GenerateLateralSurface(dominantCurves, finalSurfacePoints, finalPointIndex, finalSurfaceFaces, isClosed: true);
+
+            // Cap only the dominant contour of the topmost level.
+            List<Point3F> topmostCurve = dominantCurves[dominantCurves.Count - 1];
+            SurfaceBuilderCopilot.GenerateCapSurface(topmostCurve, finalSurfacePoints, finalPointIndex, finalSurfaceFaces);
         }
 
         Surface surfaceEntity = new Surface
@@ -87,7 +106,58 @@ public class MorphMuseController
         _ui.ActiveView.RefreshView();
     }
 
-    private List<List<Point3F>> PrepareClosedCurves(PolylineManager selectionManager)
+    /// <summary>
+    /// Picks the dominant (largest perimeter) contour for each level, discarding
+    /// any remaining secondary contours. This guarantees a single continuous
+    /// lateral surface with no disconnected mesh fragments.
+    /// </summary>
+    private List<List<Point3F>> SelectDominantContourPerLevel(List<List<List<Point3F>>> groupedLevels)
+    {
+        var result = new List<List<Point3F>>();
+
+        foreach (var level in groupedLevels)
+        {
+            if (level.Count == 0) continue;
+
+            List<Point3F> dominant = level[0];
+            double dominantPerimeter = CalculatePerimeter(dominant);
+
+            for (int k = 1; k < level.Count; k++)
+            {
+                double perimeter = CalculatePerimeter(level[k]);
+                if (perimeter > dominantPerimeter)
+                {
+                    dominant = level[k];
+                    dominantPerimeter = perimeter;
+                }
+            }
+
+            result.Add(dominant);
+        }
+
+        return result;
+    }
+
+    private static double CalculatePerimeter(List<Point3F> contour)
+    {
+        double perimeter = 0;
+        for (int i = 0; i < contour.Count - 1; i++)
+        {
+            perimeter += Geometry3F.Distance(contour[i], contour[i + 1]);
+        }
+        if (contour.Count > 2)
+        {
+            perimeter += Geometry3F.Distance(contour[contour.Count - 1], contour[0]);
+        }
+        return perimeter;
+    }
+
+    /// <summary>
+    /// Prepares closed-rail cross sections while preserving the grouping by generatrix
+    /// level, so levels with multiple disjoint contours (offset splits) are not
+    /// incorrectly flattened into the lateral surface sequence.
+    /// </summary>
+    private List<List<List<Point3F>>> PrepareClosedCurvesGrouped(PolylineManager selectionManager)
     {
         var units = SettingsManager.GetUnits();
         Polyline guideCurve = selectionManager.ClosedPoly != null ? selectionManager.ClosedPoly : null;
@@ -109,14 +179,14 @@ public class MorphMuseController
             openCurveProcessor.SimplifiedPoints
         );
 
-        var sampledClosedCurves = CurveSampler.GenerateSampledPointsFromContours(
-            orderedClosedCurves,
+        var sampledGroupedCurves = CurveSampler.GenerateGroupedSampledPointsFromContours(
+            orderedClosedCurves.Cast<List<CamBam.CAD.Polyline>>().ToList(),
             openCurveProcessor.SimplifiedPoints,
             samplingStep,
             dpTolerance
         );
 
-        return SimplifyAll(sampledClosedCurves, dpTolerance);
+        return SimplifyAllGrouped(sampledGroupedCurves, dpTolerance);
     }
 
     private List<List<Point3F>> PrepareOpenCurves(PolylineManager selectionManager)
@@ -156,6 +226,25 @@ public class MorphMuseController
         var result = new List<List<Point3F>>();
         foreach (var curve in curves)
             result.Add(PolylineSimplifier.SimplifyDouglasPeucker(curve, tolerance));
+        return result;
+    }
+
+    /// <summary>
+    /// Applies Douglas-Peucker simplification to every contour of every level,
+    /// preserving the level grouping.
+    /// </summary>
+    private List<List<List<Point3F>>> SimplifyAllGrouped(List<List<List<Point3F>>> groupedCurves, double tolerance)
+    {
+        var result = new List<List<List<Point3F>>>();
+        foreach (var level in groupedCurves)
+        {
+            var simplifiedLevel = new List<List<Point3F>>();
+            foreach (var contour in level)
+            {
+                simplifiedLevel.Add(PolylineSimplifier.SimplifyDouglasPeucker(contour, tolerance));
+            }
+            result.Add(simplifiedLevel);
+        }
         return result;
     }
 
