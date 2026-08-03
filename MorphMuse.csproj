@@ -86,10 +86,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files\CamBam plus 1.0\CamBam.Geom.dll</HintPath>
     </Reference>
-    <Reference Include="CamBamPlus_Toolkit, Version=1.1.7389.24240, Culture=neutral, processorArchitecture=AMD64">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\Program Files\CamBam plus 1.0\plugins\CamBamPlus_Toolkit.dll</HintPath>
-    </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files\CamBam plus 1.0\plugins\Newtonsoft.Json.dll</HintPath>
@@ -134,6 +130,7 @@
     </Compile>
     <EmbeddedResource Include="Services\CurveSelectionDialog.resx">
       <DependentUpon>CurveSelectionDialog.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <None Include="CLAUDE.md" />
     <None Include="CONTRIBUTING.md" />
