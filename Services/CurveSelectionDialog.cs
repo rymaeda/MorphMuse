@@ -80,7 +80,7 @@ namespace MorphMuse.Services
                 Height = 60,
                 BorderStyle = BorderStyle.FixedSingle
             };
-            pnlPreview1.Paint += (s, e) => DrawCurvePreview(e.Graphics, pnlPreview1.ClientSize, _openCurves[0].Polyline);
+            pnlPreview1.Paint += (s, e) => DrawCurvePreview(e.Graphics, pnlPreview1.ClientSize, _openCurves[0].Polyline, _openCurves[1].Polyline);
 
             // Curve 2 radio button with identification
             rbCurve2AsRail = new RadioButton()
@@ -102,7 +102,7 @@ namespace MorphMuse.Services
                 Height = 60,
                 BorderStyle = BorderStyle.FixedSingle
             };
-            pnlPreview2.Paint += (s, e) => DrawCurvePreview(e.Graphics, pnlPreview2.ClientSize, _openCurves[1].Polyline);
+            pnlPreview2.Paint += (s, e) => DrawCurvePreview(e.Graphics, pnlPreview2.ClientSize, _openCurves[1].Polyline, _openCurves[0].Polyline);
 
             // Info text
             Label lblInfo = new Label()
@@ -155,98 +155,162 @@ namespace MorphMuse.Services
         }
 
         /// <summary>
-        /// Draws a simple normalized preview of the given polyline's XY shape,
-        /// fitted (with margin) inside the target panel's client area. Arcs are
-        /// approximated by their control points (start/end), which is sufficient
-        /// for a small thumbnail-style preview. The curve's start point is
-        /// highlighted with a small blue circle (black outline) so the user can
-        /// identify the curve's direction/origin at a glance.
-        /// </summary>
-        private void DrawCurvePreview(Graphics g, Size clientSize, Polyline polyline)
+        /// Draws a normalized preview of <paramref name="polyline"/>'s XY shape, fitted
+        /// (with margin) inside the target panel's client area. Arcs are approximated by
+        /// their control points (start/end), which is sufficient for a small thumbnail-style
+        /// preview. The curve's start point is highlighted with a small blue circle (black
+        /// outline) so the user can identify the curve's direction/origin at a glance.
+        ///
+        /// The polyline with the LARGER bounding box always fills the available preview
+        /// area (as before). The polyline with the SMALLER bounding box is drawn using the
+        /// SAME scale as the larger one -- so their relative sizes are visually comparable --
+/// unless its bounding box would then be smaller than 20% of the larger curve's
+/// bounding box, in which case an extra "boost" factor is applied (to that smaller
+/// curve only) so it never shrinks below that 20% minimum relative size.
+/// </summary>
+private void DrawCurvePreview(Graphics g, Size clientSize, Polyline polyline, Polyline otherPolyline)
+{
+    g.Clear(Color.White);
+
+    if (polyline == null || polyline.Points.Count < 2)
+        return;
+
+    var pts = polyline.Points.ToArray().Select(p => p.Point).ToList();
+
+    double minX = pts.Min(p => p.X);
+    double maxX = pts.Max(p => p.X);
+    double minY = pts.Min(p => p.Y);
+    double maxY = pts.Max(p => p.Y);
+
+    double width = maxX - minX;
+    double height = maxY - minY;
+
+    if (width <= 0 && height <= 0)
+        return;
+
+    const int margin = 4;
+    double availableWidth = clientSize.Width - 2 * margin;
+    double availableHeight = clientSize.Height - 2 * margin;
+
+    double ownScale = ComputeFitScale(width, height, availableWidth, availableHeight);
+    if (ownScale <= 0 || double.IsInfinity(ownScale) || double.IsNaN(ownScale))
+        return;
+
+    double scale = ownScale;
+
+    double thisSize = BoundingBoxSize(width, height);
+    if (TryGetBounds(otherPolyline, out double otherWidth, out double otherHeight))
+    {
+        double otherScale = ComputeFitScale(otherWidth, otherHeight, availableWidth, availableHeight);
+        double otherSize = BoundingBoxSize(otherWidth, otherHeight);
+
+        // The curve with the larger bounding box keeps its own fit-to-panel scale
+        // (i.e. it needs a smaller scale factor to fit). The other one (smaller
+        // bounding box) adopts that same scale so relative sizes are comparable.
+        bool thisIsSmaller = ownScale >= otherScale;
+        if (thisIsSmaller && otherSize > 0)
         {
-            g.Clear(Color.White);
+            double sharedScale = otherScale;
 
-            if (polyline == null || polyline.Points.Count < 2)
-                return;
+            // Enforce a minimum relative size of 40% for the smaller curve
+            // compared to the larger one, boosting only this curve's scale if needed.
+            double ratio = (thisSize * sharedScale) / (otherSize * otherScale);
+            const double minRatio = 0.4;
 
-            var pts = polyline.Points.ToArray().Select(p => p.Point).ToList();
-
-            double minX = pts.Min(p => p.X);
-            double maxX = pts.Max(p => p.X);
-            double minY = pts.Min(p => p.Y);
-            double maxY = pts.Max(p => p.Y);
-
-            double width = maxX - minX;
-            double height = maxY - minY;
-
-            if (width <= 0 && height <= 0)
-                return;
-
-            const int margin = 4;
-            double availableWidth = clientSize.Width - 2 * margin;
-            double availableHeight = clientSize.Height - 2 * margin;
-
-            // Preserve aspect ratio.
-            double scaleX = width > 0 ? availableWidth / width : availableHeight;
-            double scaleY = height > 0 ? availableHeight / height : availableWidth;
-            double scale = Math.Min(scaleX, scaleY);
-
-            if (scale <= 0 || double.IsInfinity(scale) || double.IsNaN(scale))
-                return;
-
-            // Center the shape within the panel.
-            double offsetX = margin + (availableWidth - width * scale) / 2.0;
-            double offsetY = margin + (availableHeight - height * scale) / 2.0;
-
-            PointF[] screenPoints = pts.Select(p =>
-            {
-                float sx = (float)(offsetX + (p.X - minX) * scale);
-                // Invert Y so the preview matches CAD orientation (Y up).
-                float sy = (float)(clientSize.Height - offsetY - (p.Y - minY) * scale);
-                return new PointF(sx, sy);
-            }).ToArray();
-
-            using (var pen = new Pen(Color.Black, 1f))
-            {
-                if (screenPoints.Length >= 2)
-                {
-                    g.DrawLines(pen, screenPoints);
-                }
-            }
-
-            // Highlight the start point with a small blue circle (black outline).
-            const float startPointRadius = 3f;
-            PointF startPoint = screenPoints[0];
-            RectangleF startPointRect = new RectangleF(
-                startPoint.X - startPointRadius,
-                startPoint.Y - startPointRadius,
-                startPointRadius * 2f,
-                startPointRadius * 2f);
-
-            using (var startPointBrush = new SolidBrush(Color.Blue))
-            using (var startPointPen = new Pen(Color.Black, 1f))
-            {
-                g.FillEllipse(startPointBrush, startPointRect);
-                g.DrawEllipse(startPointPen, startPointRect);
-            }
+            scale = ratio < minRatio
+                ? sharedScale * (minRatio / ratio)
+                : sharedScale;
         }
+    }
 
-        private void BtnOk_Click(object sender, EventArgs e)
+    // Center the shape within the panel.
+    double offsetX = margin + (availableWidth - width * scale) / 2.0;
+    double offsetY = margin + (availableHeight - height * scale) / 2.0;
+
+    PointF[] screenPoints = pts.Select(p =>
+    {
+        float sx = (float)(offsetX + (p.X - minX) * scale);
+        // Invert Y so the preview matches CAD orientation (Y up).
+        float sy = (float)(clientSize.Height - offsetY - (p.Y - minY) * scale);
+        return new PointF(sx, sy);
+    }).ToArray();
+
+    using (var pen = new Pen(Color.Black, 1f))
+    {
+        if (screenPoints.Length >= 2)
         {
-            // Determine which curve is rail and which is form based on radio button selection
-            if (rbCurve1AsRail.Checked)
-            {
-                SelectedRail = _openCurves[0];
-                SelectedForm = _openCurves[1];
-            }
-            else
-            {
-                SelectedRail = _openCurves[1];
-                SelectedForm = _openCurves[0];
-            }
-
-            this.DialogResult = DialogResult.OK;
-            this.Close();
+            g.DrawLines(pen, screenPoints);
         }
+    }
+
+    // Highlight the start point with a small blue circle (black outline).
+    const float startPointRadius = 3f;
+    PointF startPoint = screenPoints[0];
+    RectangleF startPointRect = new RectangleF(
+        startPoint.X - startPointRadius,
+        startPoint.Y - startPointRadius,
+        startPointRadius * 2f,
+        startPointRadius * 2f);
+
+    using (var startPointBrush = new SolidBrush(Color.Blue))
+    using (var startPointPen = new Pen(Color.Black, 1f))
+    {
+        g.FillEllipse(startPointBrush, startPointRect);
+        g.DrawEllipse(startPointPen, startPointRect);
+    }
+}
+
+private static double ComputeFitScale(double width, double height, double availableWidth, double availableHeight)
+{
+    double scaleX = width > 0 ? availableWidth / width : availableHeight;
+    double scaleY = height > 0 ? availableHeight / height : availableWidth;
+    return Math.Min(scaleX, scaleY);
+}
+
+/// <summary>
+/// A single scalar "size" measure for a bounding box (its diagonal), used to
+/// compare the relative sizes of two curves' bounding boxes.
+/// </summary>
+private static double BoundingBoxSize(double width, double height)
+{
+    return Math.Sqrt(width * width + height * height);
+}
+
+private static bool TryGetBounds(Polyline polyline, out double width, out double height)
+{
+    width = 0;
+    height = 0;
+
+    if (polyline == null || polyline.Points.Count < 2)
+        return false;
+
+    var pts = polyline.Points.ToArray().Select(p => p.Point).ToList();
+    double minX = pts.Min(p => p.X);
+    double maxX = pts.Max(p => p.X);
+    double minY = pts.Min(p => p.Y);
+    double maxY = pts.Max(p => p.Y);
+
+    width = maxX - minX;
+    height = maxY - minY;
+    return width > 0 || height > 0;
+}
+
+private void BtnOk_Click(object sender, EventArgs e)
+{
+    // Determine which curve is rail and which is form based on radio button selection
+    if (rbCurve1AsRail.Checked)
+    {
+        SelectedRail = _openCurves[0];
+        SelectedForm = _openCurves[1];
+    }
+    else
+    {
+        SelectedRail = _openCurves[1];
+        SelectedForm = _openCurves[0];
+    }
+
+    this.DialogResult = DialogResult.OK;
+    this.Close();
+}
     }
 }
