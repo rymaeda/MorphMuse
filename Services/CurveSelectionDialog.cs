@@ -65,7 +65,7 @@ namespace MorphMuse.Services
                 Text = curve1Id,
                 Left = 20,
                 Top = 75,
-                Width = 200,
+                Width = 140,
                 Height = 30,
                 Checked = true,
                 AutoSize = false
@@ -74,7 +74,7 @@ namespace MorphMuse.Services
             // Preview for curve 1
             pnlPreview1 = new Panel()
             {
-                Left = 230,
+                Left = 180,
                 Top = 60,
                 Width = 90,
                 Height = 60,
@@ -88,7 +88,7 @@ namespace MorphMuse.Services
                 Text = curve2Id,
                 Left = 20,
                 Top = 150,
-                Width = 200,
+                Width = 140,
                 Height = 30,
                 AutoSize = false
             };
@@ -96,7 +96,7 @@ namespace MorphMuse.Services
             // Preview for curve 2
             pnlPreview2 = new Panel()
             {
-                Left = 230,
+                Left = 180,
                 Top = 135,
                 Width = 90,
                 Height = 60,
@@ -175,7 +175,7 @@ private void DrawCurvePreview(Graphics g, Size clientSize, Polyline polyline, Po
     if (polyline == null || polyline.Points.Count < 2)
         return;
 
-    var pts = polyline.Points.ToArray().Select(p => p.Point).ToList();
+    var pts = TessellateForPreview(polyline);
 
     double minX = pts.Min(p => p.X);
     double maxX = pts.Max(p => p.X);
@@ -244,7 +244,7 @@ private void DrawCurvePreview(Graphics g, Size clientSize, Polyline polyline, Po
     }
 
     // Highlight the start point with a small blue circle (black outline).
-    const float startPointRadius = 3f;
+    const float startPointRadius = 2f;
     PointF startPoint = screenPoints[0];
     RectangleF startPointRect = new RectangleF(
         startPoint.X - startPointRadius,
@@ -276,26 +276,28 @@ private static double BoundingBoxSize(double width, double height)
     return Math.Sqrt(width * width + height * height);
 }
 
-private static bool TryGetBounds(Polyline polyline, out double width, out double height)
-{
-    width = 0;
-    height = 0;
+        private static bool TryGetBounds(Polyline polyline, out double width, out double height)
+        {
+            width = 0;
+            height = 0;
 
-    if (polyline == null || polyline.Points.Count < 2)
-        return false;
+            if (polyline == null || polyline.Points.Count < 2)
+                return false;
 
-    var pts = polyline.Points.ToArray().Select(p => p.Point).ToList();
-    double minX = pts.Min(p => p.X);
-    double maxX = pts.Max(p => p.X);
-    double minY = pts.Min(p => p.Y);
-    double maxY = pts.Max(p => p.Y);
+            var pts = TessellateForPreview(polyline);
+            if (pts.Count < 2)
+                return false;
 
-    width = maxX - minX;
-    height = maxY - minY;
-    return width > 0 || height > 0;
-}
+            double minX = pts.Min(p => p.X);
+            double maxX = pts.Max(p => p.X);
+            double minY = pts.Min(p => p.Y);
+            double maxY = pts.Max(p => p.Y);
 
-private void BtnOk_Click(object sender, EventArgs e)
+            width = maxX - minX;
+            height = maxY - minY;
+            return width > 0 || height > 0;
+        }
+        private void BtnOk_Click(object sender, EventArgs e)
 {
     // Determine which curve is rail and which is form based on radio button selection
     if (rbCurve1AsRail.Checked)
@@ -311,6 +313,69 @@ private void BtnOk_Click(object sender, EventArgs e)
 
     this.DialogResult = DialogResult.OK;
     this.Close();
+}
+
+/// <summary>
+/// Generates a dense set of 2D points along the given polyline, tessellating
+/// arcs using the CamBam-provided primitive decomposition (<see cref="Polyline.ToPrimitives"/>)
+/// instead of relying only on the raw vertex list. This avoids arcs stored as a
+/// start/end vertex pair (plus a bulge value) being drawn as a straight chord,
+/// which made the preview look much more "simplified"/angular than the real curve.
+/// </summary>
+private static List<Point3F> TessellateForPreview(Polyline polyline, double maxStep = 0.5)
+{
+    var points = new PointList();
+
+    if (polyline == null || polyline.Points.Count < 2)
+        return new List<Point3F>();
+
+    var clone = (Polyline)polyline.Clone();
+    if (clone.ApplyTransformation())
+    {
+        clone.Transform = Matrix4x4F.Identity;
+    }
+
+    Entity[] primitives = clone.ToPrimitives();
+
+    foreach (var primitive in primitives)
+    {
+        if (primitive is Arc arc)
+        {
+            double arcLength = Math.Abs(arc.Sweep) * Math.PI / 180.0 * arc.Radius;
+            int steps = Math.Max(2, (int)Math.Ceiling(arcLength / maxStep));
+
+            double angleStep = arc.Sweep / steps;
+            for (int i = 0; i <= steps; i++)
+            {
+                double angleDeg = arc.Start + i * angleStep;
+                double angleRad = angleDeg * Math.PI / 180.0;
+
+                double x = arc.Point.X + arc.Radius * Math.Cos(angleRad);
+                double y = arc.Point.Y + arc.Radius * Math.Sin(angleRad);
+                points.Add(new Point3F(x, y, arc.Point.Z));
+            }
+        }
+        else if (primitive is Line line && line.Points.Count > 0)
+        {
+            points.Add(line.Points[0]);
+            points.Add(line.Points[line.Points.Count - 1]);
+        }
+    }
+
+    if (!clone.Transform.IsIdentity())
+    {
+        points.ApplyTransformation(clone.Transform);
+    }
+
+    var result = points.Points.ToArray().ToList();
+
+    // Remove duplicate closing point if the curve is closed.
+    if (result.Count > 1 && Point3F.Match(result[0], result[result.Count - 1]))
+    {
+        result.RemoveAt(result.Count - 1);
+    }
+
+    return result;
 }
     }
 }
