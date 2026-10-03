@@ -200,14 +200,27 @@ public class MorphMuseController
         double dpTolerance = SettingsManager.ConvertFromMillimeters(adaptiveParams.DouglasPeuckerTolerance, units);
         double samplingStep = SettingsManager.ConvertFromMillimeters(adaptiveParams.SamplingStepClosedPoly, units) / 5;
 
+        // Apply direction reversal if requested by the user
+        Polyline formCurve = selectionManager.OpenFormPoly;
+        if (selectionManager.FormReverseDirection && formCurve != null)
+        {
+            formCurve = ReversePolyline(formCurve);
+        }
+
         var openCurveProcessor = new OpenPolylineProcessor(
-            selectionManager.OpenFormPoly,
+            formCurve,
             samplingStep,
             dpTolerance
         );
 
+        Polyline railCurve = selectionManager.OpenRailPoly;
+        if (selectionManager.RailReverseDirection && railCurve != null)
+        {
+            railCurve = ReversePolyline(railCurve);
+        }
+
         var orderedOpenCurves = LayerGenerator.GenerateParallelOpenPolylinesByGeratrizOrder(
-            selectionManager.OpenRailPoly,
+            railCurve,
             openCurveProcessor.SimplifiedPoints
         );
 
@@ -219,6 +232,21 @@ public class MorphMuseController
         );
 
         return SimplifyAll(sampledOpenCurves, dpTolerance);
+    }
+
+    private static Polyline ReversePolyline(Polyline polyline)
+    {
+        if (polyline == null)
+            return polyline;
+
+        var reversed = (Polyline)polyline.Clone();
+        var items = reversed.Points.ToArray();
+        System.Array.Reverse(items);
+        for (int i = 0; i < items.Length; i++)
+        {
+            reversed.Points[i] = items[i];
+        }
+        return reversed;
     }
 
     private List<List<Point3F>> SimplifyAll(List<List<Point3F>> curves, double tolerance)

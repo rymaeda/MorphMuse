@@ -167,6 +167,36 @@ namespace MorphMuse.Services
             return contours;
         }
 
+        /// <summary>
+        /// Ensures the given open polyline's point order starts near <paramref name="referenceStart"/>,
+        /// reversing the polyline in-place if its last point is actually closer to the
+        /// reference than its first point. This keeps the profile's starting point
+        /// consistent across offset layers, since offsetting an open curve can flip
+        /// the resulting point order depending on which side of the base curve the
+        /// offset lies on.
+        /// </summary>
+        private static void NormalizeStartDirection(Polyline layer, Point3F referenceStart)
+        {
+            if (layer == null || layer.Points.Count < 2)
+                return;
+
+            Point3F first = layer.Points[0].Point;
+            Point3F last = layer.Points[layer.Points.Count - 1].Point;
+
+            double distToFirst = Geometry3F.Distance(referenceStart, first);
+            double distToLast = Geometry3F.Distance(referenceStart, last);
+
+            if (distToLast < distToFirst)
+            {
+                var items = layer.Points.ToArray();
+                System.Array.Reverse(items);
+                for (int i = 0; i < items.Length; i++)
+                {
+                    layer.Points[i] = items[i];
+                }
+            }
+        }
+
         public static List<List<Polyline>> GenerateParallelOpenPolylinesByGeratrizOrder(
             Polyline openBase,
             List<Point3F> openReferencePoints)

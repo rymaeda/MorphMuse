@@ -100,6 +100,10 @@ namespace MorphMuse.Services
                 {
                     AlignCurveToPrevious(lower, upper); // Align only if they are closed
                 }
+                else
+                {
+                    AlignOpenCurveToPrevious(lower, upper); // Ensure consistent start/direction for open profiles too
+                }
 
                 Surface partialSurface = BuildSurfaceBetweenCurves(lower, upper, isClosed);
 
@@ -308,6 +312,34 @@ namespace MorphMuse.Services
             for (int i = 0; i < curve.Count; i++)
                 result.Add(curve[(i + offset) % curve.Count]);
             return result;
+        }
+
+        /// <summary>
+        /// Ensures an open profile curve ("current") keeps a consistent start point and
+        /// direction relative to the previous level's curve ("previous"). Unlike closed
+        /// curves (see <see cref="AlignCurveToPrevious"/>), open curves cannot be
+        /// rotated -- their endpoints are fixed -- but their point ORDER can still come
+        /// out reversed from the offset algorithm (e.g. when the offset falls on the
+        /// opposite side of the base rail curve). Without this check, consecutive
+        /// profile layers can be stitched start-to-end instead of start-to-start,
+        /// producing a twisted/crossed lateral surface.
+        /// </summary>
+        private static void AlignOpenCurveToPrevious(List<Point3F> previous, List<Point3F> current)
+        {
+            if (previous == null || current == null || previous.Count < 2 || current.Count < 2)
+                return;
+
+            // Compare matching the curves as-is versus matching them with "current" reversed.
+            double straightScore = Geometry3F.Distance(previous[0], current[0])
+                + Geometry3F.Distance(previous[previous.Count - 1], current[current.Count - 1]);
+
+            double reversedScore = Geometry3F.Distance(previous[0], current[current.Count - 1])
+                + Geometry3F.Distance(previous[previous.Count - 1], current[0]);
+
+            if (reversedScore < straightScore)
+            {
+                current.Reverse();
+            }
         }
     }
 }

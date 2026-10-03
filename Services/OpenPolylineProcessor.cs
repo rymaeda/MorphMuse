@@ -38,5 +38,21 @@ namespace MorphMuse.Services
                 SimplifiedPoints = PolylineSimplifier.SimplifyDouglasPeucker(translatedPoints, simplifyTolerance);
             }
         }
+
+        public static Polyline ReversePolylineIfNeeded(Polyline polyline, bool reverseDirection)
+        {
+            if (!reverseDirection || polyline == null)
+                return polyline;
+
+            // Clone to avoid mutating the original
+            var reversed = (Polyline)polyline.Clone();
+            var items = reversed.Points.ToArray();
+            System.Array.Reverse(items);
+            for (int i = 0; i < items.Length; i++)
+            {
+                reversed.Points[i] = items[i];
+            }
+            return reversed;
+        }
     }
 }

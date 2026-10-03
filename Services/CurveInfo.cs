@@ -4,7 +4,8 @@ namespace MorphMuse.Services
 {
     /// <summary>
     /// Wrapper class to preserve original entity information (ID, Type) 
-    /// even after conversion to Polyline
+    /// even after conversion to Polyline, and to track user-requested transformations
+    /// like curve direction reversal.
     /// </summary>
     public class CurveInfo
     {
@@ -23,11 +24,18 @@ namespace MorphMuse.Services
         /// </summary>
         public string OriginalType { get; set; }
 
+        /// <summary>
+        /// If true, the polyline's point order should be reversed before use in the plugin.
+        /// This is set by the user via the curve selection dialog checkboxes.
+        /// </summary>
+        public bool ReverseDirection { get; set; }
+
         public CurveInfo(Polyline polyline, int originalId, string originalType)
         {
             Polyline = polyline;
             OriginalId = originalId;
             OriginalType = originalType;
+            ReverseDirection = false;
         }
 
         /// <summary>

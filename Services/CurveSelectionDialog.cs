@@ -15,6 +15,8 @@ namespace MorphMuse.Services
         private RadioButton rbCurve2AsRail;
         private Panel pnlPreview1;
         private Panel pnlPreview2;
+        private CheckBox chkReverse1;
+        private CheckBox chkReverse2;
         private Button btnOk;
         private Button btnCancel;
         private List<CurveInfo> _openCurves;
@@ -32,8 +34,8 @@ namespace MorphMuse.Services
         {
             // Configure form properties
             this.Text = "Select Rail Curve";
-            this.Width = 340;
-            this.Height = 310;
+            this.Width = 380;
+            this.Height = 350;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.StartPosition = FormStartPosition.CenterParent;
             this.MaximizeBox = false;
@@ -46,7 +48,7 @@ namespace MorphMuse.Services
                 Text = "Which curve is the Rail (path to be offset)?",
                 Left = 20,
                 Top = 20,
-                Width = 300,
+                Width = 350,
                 Height = 30,
                 Font = new Font(this.Font.FontFamily, this.Font.Size + 1, FontStyle.Bold),
                 AutoSize = false
@@ -66,51 +68,77 @@ namespace MorphMuse.Services
                 Left = 20,
                 Top = 75,
                 Width = 140,
-                Height = 30,
+                Height = 20,
                 Checked = true,
+                AutoSize = false
+            };
+
+            // Checkbox to reverse curve 1
+            chkReverse1 = new CheckBox()
+            {
+                Text = "Reverse direction",
+                Left = 40,
+                Top = 100,
+                Width = 150,
+                Height = 20,
                 AutoSize = false
             };
 
             // Preview for curve 1
             pnlPreview1 = new Panel()
             {
-                Left = 180,
+                Left = 280,
                 Top = 60,
-                Width = 90,
+                Width = 80,
                 Height = 60,
                 BorderStyle = BorderStyle.FixedSingle
             };
-            pnlPreview1.Paint += (s, e) => DrawCurvePreview(e.Graphics, pnlPreview1.ClientSize, _openCurves[0].Polyline, _openCurves[1].Polyline);
+            pnlPreview1.Paint += (s, e) => DrawCurvePreview(e.Graphics, pnlPreview1.ClientSize, _openCurves[0].Polyline, _openCurves[1].Polyline, chkReverse1.Checked);
 
             // Curve 2 radio button with identification
             rbCurve2AsRail = new RadioButton()
             {
                 Text = curve2Id,
                 Left = 20,
-                Top = 150,
+                Top = 160,
                 Width = 140,
-                Height = 30,
+                Height = 20,
+                AutoSize = false
+            };
+
+            // Checkbox to reverse curve 2
+            chkReverse2 = new CheckBox()
+            {
+                Text = "Reverse direction",
+                Left = 40,
+                Top = 185,
+                Width = 150,
+                Height = 20,
                 AutoSize = false
             };
 
             // Preview for curve 2
             pnlPreview2 = new Panel()
             {
-                Left = 180,
-                Top = 135,
-                Width = 90,
+                Left = 280,
+                Top = 145,
+                Width = 80,
                 Height = 60,
                 BorderStyle = BorderStyle.FixedSingle
             };
-            pnlPreview2.Paint += (s, e) => DrawCurvePreview(e.Graphics, pnlPreview2.ClientSize, _openCurves[1].Polyline, _openCurves[0].Polyline);
+            pnlPreview2.Paint += (s, e) => DrawCurvePreview(e.Graphics, pnlPreview2.ClientSize, _openCurves[1].Polyline, _openCurves[0].Polyline, chkReverse2.Checked);
+
+            // Wire up checkbox change events to refresh previews
+            chkReverse1.CheckedChanged += (s, e) => pnlPreview1.Invalidate();
+            chkReverse2.CheckedChanged += (s, e) => pnlPreview2.Invalidate();
 
             // Info text
             Label lblInfo = new Label()
             {
                 Text = "The other curve will be used as Form (profile definition).",
                 Left = 20,
-                Top = 205,
-                Width = 300,
+                Top = 240,
+                Width = 350,
                 Height = 30,
                 Font = new Font(this.Font.FontFamily, this.Font.Size, FontStyle.Italic),
                 ForeColor = SystemColors.GrayText,
@@ -121,8 +149,8 @@ namespace MorphMuse.Services
             btnOk = new Button()
             {
                 Text = "OK",
-                Left = 150,
-                Top = 245,
+                Left = 190,
+                Top = 285,
                 Width = 80,
                 Height = 30,
                 DialogResult = DialogResult.OK
@@ -133,8 +161,8 @@ namespace MorphMuse.Services
             btnCancel = new Button()
             {
                 Text = "Cancel",
-                Left = 240,
-                Top = 245,
+                Left = 280,
+                Top = 285,
                 Width = 80,
                 Height = 30,
                 DialogResult = DialogResult.Cancel
@@ -143,8 +171,10 @@ namespace MorphMuse.Services
             // Add all controls to form
             this.Controls.Add(lblTitle);
             this.Controls.Add(rbCurve1AsRail);
+            this.Controls.Add(chkReverse1);
             this.Controls.Add(pnlPreview1);
             this.Controls.Add(rbCurve2AsRail);
+            this.Controls.Add(chkReverse2);
             this.Controls.Add(pnlPreview2);
             this.Controls.Add(lblInfo);
             this.Controls.Add(btnOk);
@@ -156,125 +186,130 @@ namespace MorphMuse.Services
 
         /// <summary>
         /// Draws a normalized preview of <paramref name="polyline"/>'s XY shape, fitted
-        /// (with margin) inside the target panel's client area. Arcs are approximated by
-        /// their control points (start/end), which is sufficient for a small thumbnail-style
-        /// preview. The curve's start point is highlighted with a small blue circle (black
-        /// outline) so the user can identify the curve's direction/origin at a glance.
+        /// (with margin) inside the target panel's client area. If <paramref name="reversed"/>
+        /// is true, the polyline is drawn in reverse order, allowing the user to preview
+        /// the effect of the "Reverse direction" checkbox.
         ///
         /// The polyline with the LARGER bounding box always fills the available preview
         /// area (as before). The polyline with the SMALLER bounding box is drawn using the
         /// SAME scale as the larger one -- so their relative sizes are visually comparable --
-/// unless its bounding box would then be smaller than 20% of the larger curve's
-/// bounding box, in which case an extra "boost" factor is applied (to that smaller
-/// curve only) so it never shrinks below that 20% minimum relative size.
-/// </summary>
-private void DrawCurvePreview(Graphics g, Size clientSize, Polyline polyline, Polyline otherPolyline)
-{
-    g.Clear(Color.White);
-
-    if (polyline == null || polyline.Points.Count < 2)
-        return;
-
-    var pts = TessellateForPreview(polyline);
-
-    double minX = pts.Min(p => p.X);
-    double maxX = pts.Max(p => p.X);
-    double minY = pts.Min(p => p.Y);
-    double maxY = pts.Max(p => p.Y);
-
-    double width = maxX - minX;
-    double height = maxY - minY;
-
-    if (width <= 0 && height <= 0)
-        return;
-
-    const int margin = 4;
-    double availableWidth = clientSize.Width - 2 * margin;
-    double availableHeight = clientSize.Height - 2 * margin;
-
-    double ownScale = ComputeFitScale(width, height, availableWidth, availableHeight);
-    if (ownScale <= 0 || double.IsInfinity(ownScale) || double.IsNaN(ownScale))
-        return;
-
-    double scale = ownScale;
-
-    double thisSize = BoundingBoxSize(width, height);
-    if (TryGetBounds(otherPolyline, out double otherWidth, out double otherHeight))
-    {
-        double otherScale = ComputeFitScale(otherWidth, otherHeight, availableWidth, availableHeight);
-        double otherSize = BoundingBoxSize(otherWidth, otherHeight);
-
-        // The curve with the larger bounding box keeps its own fit-to-panel scale
-        // (i.e. it needs a smaller scale factor to fit). The other one (smaller
-        // bounding box) adopts that same scale so relative sizes are comparable.
-        bool thisIsSmaller = ownScale >= otherScale;
-        if (thisIsSmaller && otherSize > 0)
+        /// unless its bounding box would then be smaller than 20% of the larger curve's
+        /// bounding box, in which case an extra "boost" factor is applied (to that smaller
+        /// curve only) so it never shrinks below that 20% minimum relative size.
+        /// </summary>
+        private void DrawCurvePreview(Graphics g, Size clientSize, Polyline polyline, Polyline otherPolyline, bool reversed = false)
         {
-            double sharedScale = otherScale;
+            g.Clear(Color.White);
 
-            // Enforce a minimum relative size of 40% for the smaller curve
-            // compared to the larger one, boosting only this curve's scale if needed.
-            double ratio = (thisSize * sharedScale) / (otherSize * otherScale);
-            const double minRatio = 0.4;
+            if (polyline == null || polyline.Points.Count < 2)
+                return;
 
-            scale = ratio < minRatio
-                ? sharedScale * (minRatio / ratio)
-                : sharedScale;
+            var pts = TessellateForPreview(polyline);
+            
+            // Reverse the point order if requested (for preview purposes)
+            if (reversed)
+            {
+                pts.Reverse();
+            }
+
+            double minX = pts.Min(p => p.X);
+            double maxX = pts.Max(p => p.X);
+            double minY = pts.Min(p => p.Y);
+            double maxY = pts.Max(p => p.Y);
+
+            double width = maxX - minX;
+            double height = maxY - minY;
+
+            if (width <= 0 && height <= 0)
+                return;
+
+            const int margin = 4;
+            double availableWidth = clientSize.Width - 2 * margin;
+            double availableHeight = clientSize.Height - 2 * margin;
+
+            double ownScale = ComputeFitScale(width, height, availableWidth, availableHeight);
+            if (ownScale <= 0 || double.IsInfinity(ownScale) || double.IsNaN(ownScale))
+                return;
+
+            double scale = ownScale;
+
+            double thisSize = BoundingBoxSize(width, height);
+            if (TryGetBounds(otherPolyline, out double otherWidth, out double otherHeight))
+            {
+                double otherScale = ComputeFitScale(otherWidth, otherHeight, availableWidth, availableHeight);
+                double otherSize = BoundingBoxSize(otherWidth, otherHeight);
+
+                // The curve with the larger bounding box keeps its own fit-to-panel scale
+                // (i.e. it needs a smaller scale factor to fit). The other one (smaller
+                // bounding box) adopts that same scale so relative sizes are comparable.
+                bool thisIsSmaller = ownScale >= otherScale;
+                if (thisIsSmaller && otherSize > 0)
+                {
+                    double sharedScale = otherScale;
+
+                    // Enforce a minimum relative size of 20% for the smaller curve
+                    // compared to the larger one, boosting only this curve's scale if needed.
+                    double ratio = (thisSize * sharedScale) / (otherSize * otherScale);
+                    const double minRatio = 0.2;
+
+                    scale = ratio < minRatio
+                        ? sharedScale * (minRatio / ratio)
+                        : sharedScale;
+                }
+            }
+
+            // Center the shape within the panel.
+            double offsetX = margin + (availableWidth - width * scale) / 2.0;
+            double offsetY = margin + (availableHeight - height * scale) / 2.0;
+
+            PointF[] screenPoints = pts.Select(p =>
+            {
+                float sx = (float)(offsetX + (p.X - minX) * scale);
+                // Invert Y so the preview matches CAD orientation (Y up).
+                float sy = (float)(clientSize.Height - offsetY - (p.Y - minY) * scale);
+                return new PointF(sx, sy);
+            }).ToArray();
+
+            using (var pen = new Pen(Color.Black, 1f))
+            {
+                if (screenPoints.Length >= 2)
+                {
+                    g.DrawLines(pen, screenPoints);
+                }
+            }
+
+            // Highlight the start point with a small blue circle (black outline).
+            const float startPointRadius = 2f;
+            PointF startPoint = screenPoints[0];
+            RectangleF startPointRect = new RectangleF(
+                startPoint.X - startPointRadius,
+                startPoint.Y - startPointRadius,
+                startPointRadius * 2f,
+                startPointRadius * 2f);
+
+            using (var startPointBrush = new SolidBrush(Color.Blue))
+            using (var startPointPen = new Pen(Color.Black, 1f))
+            {
+                g.FillEllipse(startPointBrush, startPointRect);
+                g.DrawEllipse(startPointPen, startPointRect);
+            }
         }
-    }
 
-    // Center the shape within the panel.
-    double offsetX = margin + (availableWidth - width * scale) / 2.0;
-    double offsetY = margin + (availableHeight - height * scale) / 2.0;
-
-    PointF[] screenPoints = pts.Select(p =>
-    {
-        float sx = (float)(offsetX + (p.X - minX) * scale);
-        // Invert Y so the preview matches CAD orientation (Y up).
-        float sy = (float)(clientSize.Height - offsetY - (p.Y - minY) * scale);
-        return new PointF(sx, sy);
-    }).ToArray();
-
-    using (var pen = new Pen(Color.Black, 1f))
-    {
-        if (screenPoints.Length >= 2)
+        private static double ComputeFitScale(double width, double height, double availableWidth, double availableHeight)
         {
-            g.DrawLines(pen, screenPoints);
+            double scaleX = width > 0 ? availableWidth / width : availableHeight;
+            double scaleY = height > 0 ? availableHeight / height : availableWidth;
+            return Math.Min(scaleX, scaleY);
         }
-    }
 
-    // Highlight the start point with a small blue circle (black outline).
-    const float startPointRadius = 2f;
-    PointF startPoint = screenPoints[0];
-    RectangleF startPointRect = new RectangleF(
-        startPoint.X - startPointRadius,
-        startPoint.Y - startPointRadius,
-        startPointRadius * 2f,
-        startPointRadius * 2f);
-
-    using (var startPointBrush = new SolidBrush(Color.Blue))
-    using (var startPointPen = new Pen(Color.Black, 1f))
-    {
-        g.FillEllipse(startPointBrush, startPointRect);
-        g.DrawEllipse(startPointPen, startPointRect);
-    }
-}
-
-private static double ComputeFitScale(double width, double height, double availableWidth, double availableHeight)
-{
-    double scaleX = width > 0 ? availableWidth / width : availableHeight;
-    double scaleY = height > 0 ? availableHeight / height : availableWidth;
-    return Math.Min(scaleX, scaleY);
-}
-
-/// <summary>
-/// A single scalar "size" measure for a bounding box (its diagonal), used to
-/// compare the relative sizes of two curves' bounding boxes.
-/// </summary>
-private static double BoundingBoxSize(double width, double height)
-{
-    return Math.Sqrt(width * width + height * height);
-}
+        /// <summary>
+        /// A single scalar "size" measure for a bounding box (its diagonal), used to
+        /// compare the relative sizes of two curves' bounding boxes.
+        /// </summary>
+        private static double BoundingBoxSize(double width, double height)
+        {
+            return Math.Sqrt(width * width + height * height);
+        }
 
         private static bool TryGetBounds(Polyline polyline, out double width, out double height)
         {
@@ -297,85 +332,90 @@ private static double BoundingBoxSize(double width, double height)
             height = maxY - minY;
             return width > 0 || height > 0;
         }
+
         private void BtnOk_Click(object sender, EventArgs e)
-{
-    // Determine which curve is rail and which is form based on radio button selection
-    if (rbCurve1AsRail.Checked)
-    {
-        SelectedRail = _openCurves[0];
-        SelectedForm = _openCurves[1];
-    }
-    else
-    {
-        SelectedRail = _openCurves[1];
-        SelectedForm = _openCurves[0];
-    }
-
-    this.DialogResult = DialogResult.OK;
-    this.Close();
-}
-
-/// <summary>
-/// Generates a dense set of 2D points along the given polyline, tessellating
-/// arcs using the CamBam-provided primitive decomposition (<see cref="Polyline.ToPrimitives"/>)
-/// instead of relying only on the raw vertex list. This avoids arcs stored as a
-/// start/end vertex pair (plus a bulge value) being drawn as a straight chord,
-/// which made the preview look much more "simplified"/angular than the real curve.
-/// </summary>
-private static List<Point3F> TessellateForPreview(Polyline polyline, double maxStep = 0.5)
-{
-    var points = new PointList();
-
-    if (polyline == null || polyline.Points.Count < 2)
-        return new List<Point3F>();
-
-    var clone = (Polyline)polyline.Clone();
-    if (clone.ApplyTransformation())
-    {
-        clone.Transform = Matrix4x4F.Identity;
-    }
-
-    Entity[] primitives = clone.ToPrimitives();
-
-    foreach (var primitive in primitives)
-    {
-        if (primitive is Arc arc)
         {
-            double arcLength = Math.Abs(arc.Sweep) * Math.PI / 180.0 * arc.Radius;
-            int steps = Math.Max(2, (int)Math.Ceiling(arcLength / maxStep));
-
-            double angleStep = arc.Sweep / steps;
-            for (int i = 0; i <= steps; i++)
+            // Determine which curve is rail and which is form based on radio button selection
+            if (rbCurve1AsRail.Checked)
             {
-                double angleDeg = arc.Start + i * angleStep;
-                double angleRad = angleDeg * Math.PI / 180.0;
-
-                double x = arc.Point.X + arc.Radius * Math.Cos(angleRad);
-                double y = arc.Point.Y + arc.Radius * Math.Sin(angleRad);
-                points.Add(new Point3F(x, y, arc.Point.Z));
+                SelectedRail = _openCurves[0];
+                SelectedForm = _openCurves[1];
+                SelectedRail.ReverseDirection = chkReverse1.Checked;
+                SelectedForm.ReverseDirection = chkReverse2.Checked;
             }
+            else
+            {
+                SelectedRail = _openCurves[1];
+                SelectedForm = _openCurves[0];
+                SelectedRail.ReverseDirection = chkReverse2.Checked;
+                SelectedForm.ReverseDirection = chkReverse1.Checked;
+            }
+
+            this.DialogResult = DialogResult.OK;
+            this.Close();
         }
-        else if (primitive is Line line && line.Points.Count > 0)
+
+        /// <summary>
+        /// Generates a dense set of 2D points along the given polyline, tessellating
+        /// arcs using the CamBam-provided primitive decomposition (<see cref="Polyline.ToPrimitives"/>)
+        /// instead of relying only on the raw vertex list. This avoids arcs stored as a
+        /// start/end vertex pair (plus a bulge value) being drawn as a straight chord,
+        /// which made the preview look much more "simplified"/angular than the real curve.
+        /// </summary>
+        private static List<Point3F> TessellateForPreview(Polyline polyline, double maxStep = 0.5)
         {
-            points.Add(line.Points[0]);
-            points.Add(line.Points[line.Points.Count - 1]);
+            var points = new PointList();
+
+            if (polyline == null || polyline.Points.Count < 2)
+                return new List<Point3F>();
+
+            var clone = (Polyline)polyline.Clone();
+            if (clone.ApplyTransformation())
+            {
+                clone.Transform = Matrix4x4F.Identity;
+            }
+
+            Entity[] primitives = clone.ToPrimitives();
+
+            foreach (var primitive in primitives)
+            {
+                if (primitive is Arc arc)
+                {
+                    double arcLength = Math.Abs(arc.Sweep) * Math.PI / 180.0 * arc.Radius;
+                    int steps = Math.Max(2, (int)Math.Ceiling(arcLength / maxStep));
+
+                    double angleStep = arc.Sweep / steps;
+                    for (int i = 0; i <= steps; i++)
+                    {
+                        double angleDeg = arc.Start + i * angleStep;
+                        double angleRad = angleDeg * Math.PI / 180.0;
+
+                        double x = arc.Point.X + arc.Radius * Math.Cos(angleRad);
+                        double y = arc.Point.Y + arc.Radius * Math.Sin(angleRad);
+                        points.Add(new Point3F(x, y, arc.Point.Z));
+                    }
+                }
+                else if (primitive is Line line && line.Points.Count > 0)
+                {
+                    points.Add(line.Points[0]);
+                    points.Add(line.Points[line.Points.Count - 1]);
+                }
+            }
+
+            if (!clone.Transform.IsIdentity())
+            {
+                points.ApplyTransformation(clone.Transform);
+            }
+
+            var result = points.Points.ToArray().ToList();
+
+            // Remove duplicate closing point if the curve is closed.
+            if (result.Count > 1 && Point3F.Match(result[0], result[result.Count - 1]))
+            {
+                result.RemoveAt(result.Count - 1);
+            }
+
+            return result;
         }
-    }
-
-    if (!clone.Transform.IsIdentity())
-    {
-        points.ApplyTransformation(clone.Transform);
-    }
-
-    var result = points.Points.ToArray().ToList();
-
-    // Remove duplicate closing point if the curve is closed.
-    if (result.Count > 1 && Point3F.Match(result[0], result[result.Count - 1]))
-    {
-        result.RemoveAt(result.Count - 1);
-    }
-
-    return result;
-}
     }
 }

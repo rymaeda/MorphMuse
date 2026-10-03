@@ -18,6 +18,9 @@ namespace MorphMuse.Services
         public int CounterOpenP { get; private set; }
         public int CounterClosedP { get; private set; }
 
+        public bool RailReverseDirection { get; set; }
+        public bool FormReverseDirection { get; set; }
+
         public PolylineManager(Polyline closed, Polyline open)
         {
             ClosedPoly = closed;
@@ -76,10 +79,13 @@ namespace MorphMuse.Services
                 {
                     if (dialog.ShowDialog() == DialogResult.OK)
                     {
+                        // Armazene as informações de reversal no manager ou nas propriedades
                         manager = new PolylineManager(dialog.SelectedRail.Polyline, dialog.SelectedForm.Polyline, true)
                         {
                             CounterClosedP = closedCount,
-                            CounterOpenP = openCount
+                            CounterOpenP = openCount,
+                            RailReverseDirection = dialog.SelectedRail.ReverseDirection,
+                            FormReverseDirection = dialog.SelectedForm.ReverseDirection
                         };
                         return true;
                     }
