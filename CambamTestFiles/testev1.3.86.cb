@@ -4,11 +4,11 @@
     <layer name="Default" color="127,255,0">
       <objects>
         <circle id="1" c="-4,13,0" d="37.20215047547655">
-          <ModificationCount>0</ModificationCount>
+          <ModificationCount>2</ModificationCount>
           <mat m="Identity" />
         </circle>
         <spline id="2" deg="2" flags="0" ktol="0" cptol="0" ftol="0">
-          <ModificationCount>1</ModificationCount>
+          <ModificationCount>3</ModificationCount>
           <mat m="Identity" />
           <knots>
             <k>0</k>
@@ -33,6 +33,60 @@
             <p>-58,26</p>
             <p>-58.517189236797,27.8963605349225</p>
             <p>-64,26</p>
+          </ctrl>
+          <fit />
+        </spline>
+        <spline id="3" deg="3" flags="0" ktol="0" cptol="0" ftol="0">
+          <ModificationCount>1</ModificationCount>
+          <mat m="Identity" />
+          <knots>
+            <k>0</k>
+            <k>0</k>
+            <k>0</k>
+            <k>0</k>
+            <k>1</k>
+            <k>1</k>
+            <k>1</k>
+            <k>2</k>
+            <k>2</k>
+            <k>2</k>
+            <k>3</k>
+            <k>3</k>
+            <k>3</k>
+            <k>4</k>
+            <k>4</k>
+            <k>4</k>
+            <k>4</k>
+          </knots>
+          <weights>
+            <w>1</w>
+            <w>1</w>
+            <w>1</w>
+            <w>1</w>
+            <w>1</w>
+            <w>1</w>
+            <w>1</w>
+            <w>1</w>
+            <w>1</w>
+            <w>1</w>
+            <w>1</w>
+            <w>1</w>
+            <w>1</w>
+          </weights>
+          <ctrl>
+            <p>-43.8217277526855,27.2295751571655</p>
+            <p>-42.9983101375624,27.5116935513442</p>
+            <p>-42.5362231421197,27.5116935513442</p>
+            <p>-42.4354667663574,27.2295751571655</p>
+            <p>-42.178877903182,26.5111249598898</p>
+            <p>-42.3356217884312,25.6169789611576</p>
+            <p>-43.0062808990479,24.9463195800781</p>
+            <p>-43.5180215381871,24.4345787345646</p>
+            <p>-44.5853059996411,25.3939084256601</p>
+            <p>-44.8002662658691,24.8647747039795</p>
+            <p>-45.010319915695,24.3477188246059</p>
+            <p>-44.7656852873991,23.5050887561448</p>
+            <p>-44.0663623809814,22.3368844985962</p>
           </ctrl>
           <fit />
         </spline>

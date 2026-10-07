@@ -76,7 +76,7 @@ namespace MorphMuse.Services
             // Checkbox to reverse curve 1
             chkReverse1 = new CheckBox()
             {
-                Text = "Reverse direction",
+                Text = "Reverse curve direction",
                 Left = 40,
                 Top = 100,
                 Width = 150,
@@ -109,7 +109,7 @@ namespace MorphMuse.Services
             // Checkbox to reverse curve 2
             chkReverse2 = new CheckBox()
             {
-                Text = "Reverse direction",
+                Text = "Reverse curve direction",
                 Left = 40,
                 Top = 185,
                 Width = 150,

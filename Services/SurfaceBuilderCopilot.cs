@@ -22,13 +22,19 @@ namespace MorphMuse.Services
             {
                 int matchIndex = FindClosestIndex(lower[0], upper);
                 upper = RotateCurve(upper, matchIndex);
-
+    
                 // Close the curves if they are not closed (and should be)
                 if (Geometry3F.Distance(lower[0], lower[lower.Count - 1]) > 1e-6)
                     lower.Add(lower[0]);
-
+    
                 if (Geometry3F.Distance(upper[0], upper[upper.Count - 1]) > 1e-6)
                     upper.Add(upper[0]);
+            }
+            else
+            {
+                // To ensure consistent start and end points for open curves, we align them here
+                // this is important for the adaptive triangulation to work correctly
+                AlignOpenCurveToPrevious(lower, upper);
             }
 
             int i = 0, j = 0;
